@@ -1,6 +1,5 @@
 """
-S.T.A.R.K. Father Agent — Core
-Phase 1: Command router with capability registry
+S.T.A.R.K. Father Agent — Core (Updated with open_app)
 """
 
 import json
@@ -33,7 +32,7 @@ class FatherSTARK:
                 "avg_time_ms": 1200
             },
             "Harley": {
-                "domain": ["message", "alarm", "remind", "open", "close", "small", "send", "notify"],
+                "domain": ["message", "alarm", "remind", "open", "close", "small", "send", "notify", "launch"],
                 "success_rate": 0.91,
                 "avg_time_ms": 500
             },
@@ -69,15 +68,33 @@ class FatherSTARK:
         intent = json_command.get("intent")
         params = json_command.get("params", {})
         
+        # Special handling for intents that need explicit mapping
+        intent_to_domain = {
+            "open_app": "open",  # maps to Harley's "open" keyword
+            "set_wallpaper": "wallpaper",
+            "send_message": "message",
+            "research": "research",
+            "defend": "defend",
+            "code": "code"
+        }
+        
+        # Add the intent as a keyword if needed
+        if intent in intent_to_domain:
+            keyword = intent_to_domain[intent]
+            # Temporarily add to params for matching
+            temp_params = params.copy()
+            temp_params["_keyword"] = keyword
+        else:
+            temp_params = params
+        
         # Match to daughter
-        daughter = self._match_domain(intent, params)
+        daughter = self._match_domain(intent, temp_params)
         
         if daughter is None:
-            # Save error to log
             error_file = self._save_error(intent, params)
             return {
                 "status": "error",
-                "message": f"I don't know how to handle '{intent}'. Try: set_wallpaper, research, send_message, code, defend",
+                "message": f"I don't know how to handle '{intent}'. Try: set_wallpaper, research, send_message, open_app, code, defend",
                 "error_log": error_file
             }
         
@@ -90,10 +107,8 @@ class FatherSTARK:
             "params": params
         })
         
-        # Save to memory
         self._save_memory()
         
-        # Return assignment
         return {
             "status": "assigned",
             "task_id": task_id,
@@ -104,7 +119,6 @@ class FatherSTARK:
     def _save_error(self, intent, params):
         """Save unknown command to error log"""
         import glob
-        # Find next error number
         existing = glob.glob("stark_data/logs/error_*.txt")
         next_num = len(existing) + 1
         error_file = f"stark_data/logs/error_{next_num:03d}.txt"
@@ -113,21 +127,19 @@ class FatherSTARK:
             f.write(f"TIMESTAMP: {datetime.now()}\n")
             f.write(f"ERROR: Unknown intent '{intent}'\n")
             f.write(f"PARAMS: {json.dumps(params)}\n")
-            f.write(f"SUGGESTION: Use one of: set_wallpaper, research, send_message, code, defend\n")
+            f.write(f"SUGGESTION: Use one of: set_wallpaper, research, send_message, open_app, code, defend\n")
         
         return error_file
     
     def _save_memory(self):
-        """Save task history to disk"""
         memory = {
-            "task_history": self.task_history[-100:],  # Keep last 100
+            "task_history": self.task_history[-100:],
             "capability_registry": self.capability_registry
         }
         with open(self.memory_path, 'w') as f:
             json.dump(memory, f, indent=2)
     
     def report_one_line(self, result):
-        """Generate one-line summary for user"""
         if result["status"] == "assigned":
             return f"{result['assigned_to']} is handling your request."
         elif result["status"] == "error":
@@ -135,7 +147,6 @@ class FatherSTARK:
         return result.get("message", "Task completed.")
     
     def show_status(self):
-        """Display current system status"""
         print("\n" + "="*50)
         print(f"S.T.A.R.K. System Status")
         print("="*50)
@@ -146,28 +157,6 @@ class FatherSTARK:
             print(f"  - {daughter}: {data['success_rate']*100:.0f}% success, {data['avg_time_ms']}ms avg")
         print("="*50)
 
-# Quick test
 if __name__ == "__main__":
-    print("S.T.A.R.K. Father Agent — Booting up...")
     stark = FatherSTARK()
-    
-    # Test commands
-    test_commands = [
-        {"intent": "set_wallpaper", "params": {"file": "wallpaper.png"}},
-        {"intent": "research", "params": {"topic": "quantum computing"}},
-        {"intent": "send_message", "params": {"recipient": "Tony", "content": "Hi"}},
-        {"intent": "defend", "params": {"action": "scan"}},
-        {"intent": "unknown_thing", "params": {}}
-    ]
-    
-    print("\n--- Running Test Commands ---\n")
-    for cmd in test_commands:
-        result = stark.process_command(cmd)
-        print(f"Command: {cmd['intent']}")
-        print(f"  → {stark.report_one_line(result)}")
-        # If error, show where it was logged
-        if result["status"] == "error" and "error_log" in result:
-            print(f"  → Error logged to: {result['error_log']}")
-        print()
-    
-    stark.show_status()
+    print("Father STARK ready. Run 'python3 src/main.py' to start full system.")
