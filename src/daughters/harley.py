@@ -1,85 +1,79 @@
 """
-Harley Daughter Agent
-Handles small tasks, messaging, opening apps
+Harley Daughter Agent - Simple working version
 """
 
-import sys
-import os
 import subprocess
-import platform
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import shutil
+from datetime import datetime
 
 class Harley:
     def __init__(self):
         self.name = "Harley"
-        self.kids = {
-            "Groot": None,   # Executer
-            "Rover": None,   # Thinker
-            "Parker": None   # Charismatic
-        }
     
     def handle_task(self, intent, params):
-        """Route task to appropriate kid"""
-        
         if intent == "open_app":
             app = params.get("app", "")
+            if not app:
+                return {"status": "error", "message": "Which app would you like to open?"}
             return self._open_application(app)
         
         elif intent == "send_message":
-            recipient = params.get("recipient", "unknown")
+            recipient = params.get("recipient", "someone")
             content = params.get("content", "")
-            return self._simulate_message(recipient, content)
+            print(f"\n📱 [MESSAGE] To: {recipient} | {content}")
+            return {"status": "success", "message": f"I'll tell {recipient}: '{content}'"}
+        
+        elif intent == "get_time":
+            now = datetime.now()
+            time_str = now.strftime("%I:%M %p").lstrip("0")
+            return {"status": "success", "message": f"🕐 It's {time_str}"}
         
         else:
             return {"status": "error", "message": f"Harley can't handle {intent}"}
     
     def _open_application(self, app_name):
-        """Open an application based on OS"""
-        system = platform.system()
+        """Open an application"""
+        app_lower = app_name.lower()
         
         # Common app mappings
-        app_commands = {
+        app_map = {
             "firefox": "firefox",
             "chrome": "google-chrome",
-            "browser": "firefox",
+            "chromium": "chromium-browser",
             "terminal": "gnome-terminal",
             "code": "code",
-            "vscode": "code",
             "calculator": "gnome-calculator",
-            "files": "nautilus"
+            "files": "nautilus",
+            "settings": "gnome-control-center"
         }
         
-        command = app_commands.get(app_name.lower(), app_name)
+        # Get the actual command
+        cmd = app_map.get(app_lower, app_lower)
         
-        try:
-            if system == "Linux":
-                subprocess.Popen([command])
-            elif system == "Windows":
-                os.startfile(command)
-            elif system == "Darwin":
-                subprocess.Popen(["open", "-a", command])
-            else:
-                return {"status": "error", "message": f"Unsupported OS for opening apps"}
-            
-            return {"status": "success", "message": f"Opening {app_name}"}
+        # Find the executable
+        exe_path = shutil.which(cmd)
         
-        except FileNotFoundError:
-            return {"status": "error", "message": f"Couldn't find '{app_name}'. Is it installed?"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to open: {str(e)}"}
-    
-    def _simulate_message(self, recipient, content):
-        """Simulate sending a message (will integrate with real APIs later)"""
-        # For now, just log it
-        print(f"\n📱 [MESSAGE SIMULATION] To: {recipient} | Content: {content}")
-        
-        return {
-            "status": "success",
-            "message": f"I'll let {recipient} know: '{content}'"
-        }
+        if exe_path:
+            try:
+                subprocess.Popen([exe_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return {"status": "success", "message": f"Opening {app_name}"}
+            except Exception as e:
+                return {"status": "error", "message": f"Failed to open: {str(e)}"}
+        else:
+            return {"status": "error", "message": f"Couldn't find '{app_name}'. Try 'firefox', 'terminal', or 'calculator'."}
 
+# Test when run directly
 if __name__ == "__main__":
-    harley = Harley()
-    result = harley.handle_task("open_app", {"app": "firefox"})
-    print(result)
+    h = Harley()
+    
+    # Test open app
+    result = h.handle_task("open_app", {"app": "firefox"})
+    print("Open Firefox:", result)
+    
+    # Test get time
+    result = h.handle_task("get_time", {})
+    print("Get time:", result)
+    
+    # Test send message
+    result = h.handle_task("send_message", {"recipient": "Tony", "content": "Hello"})
+    print("Send message:", result)

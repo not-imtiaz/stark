@@ -1,6 +1,5 @@
 """
-Groq Translator — Fast, free LLM translation for STARK
-No credit card required. 14,400 requests/day free.
+Groq Translator — Fixed for app names
 """
 
 import os
@@ -17,19 +16,35 @@ class GroqTranslator:
 You are STARK's translator. Convert human commands into JSON machine language.
 Output ONLY valid JSON. No explanation. No extra text.
 
-Possible intents: set_wallpaper, research, send_message, code, defend, open_app, unknown
+Possible intents:
+- set_wallpaper : change desktop background
+- research : search for information
+- send_message : send a message
+- open_app : launch an application (IMPORTANT: extract the app name)
+- defend : security tasks
+- get_time : current time
+- unknown : if you cannot understand
 
+CRITICAL for open_app: Always extract the application name into the "app" field.
 Examples:
-Input: "set wallpaper.png as my background"
-Output: {"intent": "set_wallpaper", "params": {"file": "wallpaper.png"}}
+"open Firefox" → {"intent": "open_app", "params": {"app": "firefox"}}
+"launch Chrome" → {"intent": "open_app", "params": {"app": "chrome"}}
+"start terminal" → {"intent": "open_app", "params": {"app": "terminal"}}
 
-Input: "research quantum computing"
-Output: {"intent": "research", "params": {"topic": "quantum computing", "depth": "summary"}}
+Example for set_wallpaper:
+"set wallpaper.png as background" → {"intent": "set_wallpaper", "params": {"file": "wallpaper.png"}}
 
-Input: "tell Tony I'm late"
-Output: {"intent": "send_message", "params": {"recipient": "Tony", "content": "I'm late", "platform": "whatsapp"}}
+Example for research:
+"research quantum computing" → {"intent": "research", "params": {"topic": "quantum computing"}}
 
-If unknown: {"intent": "unknown", "params": {"original": "user input"}}
+Example for send_message:
+"tell Tony I'm late" → {"intent": "send_message", "params": {"recipient": "Tony", "content": "I'm late"}}
+
+Example for get_time:
+"what time is it" → {"intent": "get_time", "params": {}}
+
+Example for unknown:
+"what is the weather" → {"intent": "unknown", "params": {"original": "what is the weather"}}
 """
     
     def translate(self, user_input):
@@ -55,14 +70,14 @@ If unknown: {"intent": "unknown", "params": {"original": "user input"}}
 
 if __name__ == "__main__":
     if not os.getenv("GROQ_API_KEY"):
-        print("ERROR: GROQ_API_KEY not found in .env")
-        print("Get one at: console.groq.com")
+        print("ERROR: GROQ_API_KEY not found")
     else:
         translator = GroqTranslator()
         test_phrases = [
-            "set wallpaper.png as my background",
-            "research artificial intelligence",
-            "tell Sarah I'll be there"
+            "open Firefox",
+            "launch Chrome",
+            "tell Sarah I'm late",
+            "what time is it"
         ]
         for phrase in test_phrases:
             translator.translate_and_display(phrase)

@@ -4,13 +4,19 @@ Connects: Your Voice/Text → Groq Translator → Father STARK → Output
 """
 
 import sys
-import json
+import os
+
+# Add src to path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from translator.groq_translator import GroqTranslator
 from father.stark_core import FatherSTARK
 
 class STARKSystem:
     def __init__(self):
+        print("Loading translator...")
         self.translator = GroqTranslator()
+        print("Loading Father STARK...")
         self.father = FatherSTARK()
         print("\n" + "="*60)
         print("🟢 S.T.A.R.K. System Online")
@@ -67,7 +73,6 @@ class STARKSystem:
             except Exception as e:
                 print(f"🔴 STARK: An error occurred: {e}")
 
-# Run the system
 if __name__ == "__main__":
     stark_system = STARKSystem()
     
@@ -85,8 +90,7 @@ if __name__ == "__main__":
             "research quantum computing", 
             "tell Tony I'm late",
             "defend my system",
-            "open Firefox",
-            "what is the weather today?"
+            "open Firefox"
         ]
         
         for cmd in test_commands:
