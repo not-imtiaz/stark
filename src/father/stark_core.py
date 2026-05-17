@@ -1,14 +1,28 @@
 """
-S.T.A.R.K. Father Agent — Core (Updated with open_app)
+S.T.A.R.K. Father Agent — All daughters implemented
 """
 
 import json
 import os
 from datetime import datetime
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from daughters.morgan import Morgan
+from daughters.peter import Peter
+from daughters.harley import Harley
+from daughters.ultron import Ultron
 
 class FatherSTARK:
     def __init__(self):
         self.name = "STARK"
+        self.daughters = {
+            "Morgan": Morgan(),
+            "Peter": Peter(),
+            "Harley": Harley(),
+            "Ultron": Ultron()
+        }
         self.capability_registry = self._load_registry()
         self.task_history = []
         self.memory_path = "stark_data/memory/father_memory.json"
@@ -19,105 +33,65 @@ class FatherSTARK:
         os.makedirs("stark_data/logs", exist_ok=True)
     
     def _load_registry(self):
-        """Define what each daughter can do"""
         return {
-            "Morgan": {
-                "domain": ["code", "app", "hardware", "software", "wallpaper", "file", "build", "create"],
-                "success_rate": 1.0,
-                "avg_time_ms": 800
-            },
-            "Peter": {
-                "domain": ["research", "study", "summary", "search", "learn", "read", "find"],
-                "success_rate": 0.88,
-                "avg_time_ms": 1200
-            },
-            "Harley": {
-                "domain": ["message", "alarm", "remind", "open", "close", "small", "send", "notify", "launch"],
-                "success_rate": 0.91,
-                "avg_time_ms": 500
-            },
-            "Ultron": {
-                "domain": ["defend", "lockdown", "threat", "block", "secure", "heavy", "protect", "guard"],
-                "success_rate": 0.85,
-                "avg_time_ms": 2100
-            }
+            "Morgan": {"domain": ["code", "app", "hardware", "software", "wallpaper", "file", "delete"]},
+            "Peter": {"domain": ["research", "study", "summary", "search", "weather", "news", "find"]},
+            "Harley": {"domain": ["message", "open", "close", "launch", "send", "tell"]},
+            "Ultron": {"domain": ["defend", "lockdown", "threat", "secure", "protect", "guard"]}
         }
     
-    def _match_domain(self, intent, params):
-        """Match task to best daughter — returns None if no match"""
+    def _match_daughter(self, intent, params):
         task_text = f"{intent} {json.dumps(params)}".lower()
         
-        best_daughter = None
-        best_score = 0
-        
         for daughter, data in self.capability_registry.items():
-            # Count keyword matches
-            matches = sum(1 for keyword in data["domain"] if keyword in task_text)
-            
-            # Only consider if at least one keyword matched
-            if matches > 0:
-                score = matches + data["success_rate"]
-                if score > best_score:
-                    best_score = score
-                    best_daughter = daughter
-        
-        return best_daughter
+            for keyword in data["domain"]:
+                if keyword in task_text:
+                    return daughter
+        return None
     
     def process_command(self, json_command):
-        """Main entry point — receives JSON from DeepSeek"""
         intent = json_command.get("intent")
         params = json_command.get("params", {})
         
-        # Special handling for intents that need explicit mapping
-        intent_to_domain = {
-            "open_app": "open",  # maps to Harley's "open" keyword
-            "set_wallpaper": "wallpaper",
-            "send_message": "message",
-            "research": "research",
-            "defend": "defend",
-            "code": "code"
-        }
+        daughter_name = self._match_daughter(intent, params)
         
-        # Add the intent as a keyword if needed
-        if intent in intent_to_domain:
-            keyword = intent_to_domain[intent]
-            # Temporarily add to params for matching
-            temp_params = params.copy()
-            temp_params["_keyword"] = keyword
-        else:
-            temp_params = params
-        
-        # Match to daughter
-        daughter = self._match_domain(intent, temp_params)
-        
-        if daughter is None:
+        if daughter_name is None:
             error_file = self._save_error(intent, params)
             return {
                 "status": "error",
-                "message": f"I don't know how to handle '{intent}'. Try: set_wallpaper, research, send_message, open_app, code, defend",
+                "message": f"I don't know how to handle '{intent}'",
                 "error_log": error_file
             }
         
-        # Log task
+        daughter = self.daughters.get(daughter_name)
+        
+        if daughter is None:
+            return {
+                "status": "error",
+                "message": f"Daughter {daughter_name} not implemented yet"
+            }
+        
+        result = daughter.handle_task(intent, params)
+        
         task_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self.task_history.append({
             "task_id": task_id,
             "intent": intent,
-            "assigned_to": daughter,
-            "params": params
+            "assigned_to": daughter_name,
+            "result": result
         })
         
         self._save_memory()
         
         return {
-            "status": "assigned",
+            "status": result.get("status", "completed"),
             "task_id": task_id,
-            "assigned_to": daughter,
-            "message": f"Assigned '{intent}' to {daughter}"
+            "assigned_to": daughter_name,
+            "message": result.get("message", "Task completed"),
+            "details": result
         }
     
     def _save_error(self, intent, params):
-        """Save unknown command to error log"""
         import glob
         existing = glob.glob("stark_data/logs/error_*.txt")
         next_num = len(existing) + 1
@@ -127,36 +101,19 @@ class FatherSTARK:
             f.write(f"TIMESTAMP: {datetime.now()}\n")
             f.write(f"ERROR: Unknown intent '{intent}'\n")
             f.write(f"PARAMS: {json.dumps(params)}\n")
-            f.write(f"SUGGESTION: Use one of: set_wallpaper, research, send_message, open_app, code, defend\n")
         
         return error_file
     
     def _save_memory(self):
-        memory = {
-            "task_history": self.task_history[-100:],
-            "capability_registry": self.capability_registry
-        }
+        memory = {"task_history": self.task_history[-100:]}
         with open(self.memory_path, 'w') as f:
             json.dump(memory, f, indent=2)
     
     def report_one_line(self, result):
-        if result["status"] == "assigned":
-            return f"{result['assigned_to']} is handling your request."
-        elif result["status"] == "error":
+        if result["status"] == "error":
             return f"Error: {result['message']}"
-        return result.get("message", "Task completed.")
-    
-    def show_status(self):
-        print("\n" + "="*50)
-        print(f"S.T.A.R.K. System Status")
-        print("="*50)
-        print(f"Father Agent: {self.name} (active)")
-        print(f"Tasks handled: {len(self.task_history)}")
-        print("\nDaughter Agents:")
-        for daughter, data in self.capability_registry.items():
-            print(f"  - {daughter}: {data['success_rate']*100:.0f}% success, {data['avg_time_ms']}ms avg")
-        print("="*50)
+        return result.get("message", f"{result['assigned_to']} completed the task")
 
 if __name__ == "__main__":
     stark = FatherSTARK()
-    print("Father STARK ready. Run 'python3 src/main.py' to start full system.")
+    print("Father STARK ready with ALL daughters!")
