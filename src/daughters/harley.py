@@ -77,3 +77,39 @@ if __name__ == "__main__":
     # Test send message
     result = h.handle_task("send_message", {"recipient": "Tony", "content": "Hello"})
     print("Send message:", result)
+
+    def _send_whatsapp(self, recipient, message):
+        """Send real WhatsApp message (opens web.whatsapp.com)"""
+        try:
+            import pywhatkit as kit
+            import datetime
+            
+            # Get current time + 1 minute (pywhatkit needs future time)
+            now = datetime.datetime.now()
+            send_time = now + datetime.timedelta(minutes=1)
+            
+            # Note: This will open WhatsApp Web in browser
+            kit.sendwhatmsg(recipient, message, send_time.hour, send_time.minute)
+            
+            return {"status": "success", "message": f"WhatsApp message scheduled for {recipient} at {send_time.strftime('%H:%M')}"}
+        except Exception as e:
+            return {"status": "error", "message": f"WhatsApp failed: {str(e)}"}
+
+    def _send_whatsapp(self, recipient, message):
+        """Send real WhatsApp message (opens web.whatsapp.com)"""
+        try:
+            import pywhatkit as kit
+            import datetime
+            
+            # Get current time + 1 minute (pywhatkit needs future time)
+            now = datetime.datetime.now()
+            send_time = now + datetime.timedelta(minutes=1)
+            
+            # Note: This will open WhatsApp Web in browser
+            kit.sendwhatmsg(recipient, message, send_time.hour, send_time.minute)
+            
+            return {"status": "success", "message": f"WhatsApp message scheduled for {recipient} at {send_time.strftime('%H:%M')}"}
+        except Exception as e:
+            return {"status": "error", "message": f"WhatsApp failed: {str(e)}"}
+    def get_kids(self):
+        return ["Groot", "Rover", "Parker"]

@@ -80,3 +80,5 @@ if __name__ == "__main__":
     ultron = Ultron()
     result = ultron.handle_task("defend", {})
     print(result)
+    def get_kids(self):
+        return ["Vision", "Nexus", "Sentry"]

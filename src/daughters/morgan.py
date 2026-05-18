@@ -36,3 +36,5 @@ if __name__ == "__main__":
     morgan = Morgan()
     result = morgan.handle_task("set_wallpaper", {"file": "wallpaper.png"})
     print(result)
+    def get_kids(self):
+        return ["JARVIS", "FRIDAY", "Jocasta"]
