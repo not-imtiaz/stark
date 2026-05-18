@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>S.T.A.R.K. Dashboard</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a1a;
+            color: #00d4ff;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { border-bottom: 2px solid #00d4ff; padding-bottom: 10px; margin-bottom: 20px; }
+        .agents {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .agent-card {
+            background: #11112a;
+            border: 1px solid #00d4ff;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        .agent-name { font-size: 20px; font-weight: bold; }
+        .agent-status { font-size: 12px; color: #00ff88; margin-top: 5px; }
+        .history {
+            background: #11112a;
+            border: 1px solid #00d4ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 30px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .task-item {
+            padding: 12px;
+            border-bottom: 1px solid #222;
+            cursor: pointer;
+        }
+        .task-item:hover { background: #1a1a3a; }
+        .task-summary { font-size: 14px; }
+        .task-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            margin-right: 10px;
+        }
+        .type-action { background: #ff4444; color: white; }
+        .type-conversation { background: #00ff88; color: black; }
+        .type-knowledge { background: #00d4ff; color: black; }
+        .task-full {
+            background: #0a0a1a;
+            padding: 15px;
+            margin-top: 10px;
+            border-left: 3px solid #00d4ff;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #11112a;
+            border: 2px solid #00d4ff;
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 800px;
+            max-height: 80%;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            cursor: pointer;
+            font-size: 24px;
+        }
+        .full-text { white-space: pre-wrap; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🟢 S.T.A.R.K. Dashboard — Live Feed</h1>
+        
+        <div class="agents">
+            <div class="agent-card"><div class="agent-name">MORGAN</div><div class="agent-status">● Coding & Hardware</div></div>
+            <div class="agent-card"><div class="agent-name">PETER</div><div class="agent-status">● Research & Knowledge</div></div>
+            <div class="agent-card"><div class="agent-name">HARLEY</div><div class="agent-status">● Actions & Tasks</div></div>
+            <div class="agent-card"><div class="agent-name">ULTRON</div><div class="agent-status">● Defense & Security</div></div>
+        </div>
+        
+        <div class="history">
+            <h3>📋 Task History (Click to see full response)</h3>
+            <div id="tasks"></div>
+        </div>
+    </div>
+    
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h3 id="modal-title"></h3>
+            <div id="modal-full" class="full-text"></div>
+        </div>
+    </div>
+    
+    <script>
+        const socket = io();
+        let currentTask = null;
+        
+        socket.on('connect', () => console.log('Connected to STARK dashboard'));
+        
+        socket.on('task_update', (task) => {
+            addTaskToUI(task);
+        });
+        
+        function addTaskToUI(task) {
+            const tasksDiv = document.getElementById('tasks');
+            const taskDiv = document.createElement('div');
+            taskDiv.className = 'task-item';
+            
+            const typeClass = `type-${task.type}`;
+            taskDiv.innerHTML = `
+                <div>
+                    <span class="task-type ${typeClass}">${task.type}</span>
+                    <strong>${task.intent}</strong> — ${task.summary.substring(0, 100)}${task.summary.length > 100 ? '...' : ''}
+                </div>
+                <div style="font-size: 10px; color: #666; margin-top: 5px;">${task.task_id}</div>
+            `;
+            
+            taskDiv.onclick = () => showFullText(task);
+            
+            tasksDiv.insertBefore(taskDiv, tasksDiv.firstChild);
+            if (tasksDiv.children.length > 30) tasksDiv.removeChild(tasksDiv.lastChild);
+        }
+        
+        function showFullText(task) {
+            document.getElementById('modal-title').innerHTML = `${task.type.toUpperCase()}: ${task.intent}`;
+            let fullContent = task.full_text || task.summary;
+            document.getElementById('modal-full').innerHTML = `<strong>Question/Task:</strong> ${JSON.stringify(task.params)}<br><br><strong>Response:</strong><br>${fullContent}`;
+            document.getElementById('modal').style.display = 'flex';
+        }
+        
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+        
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('modal')) {
+                closeModal();
+            }
+        }
+        
+        // Load existing history
+        fetch('/api/history')
+            .then(res => res.json())
+            .then(tasks => {
+                tasks.reverse().forEach(task => addTaskToUI(task));
+            });
+    </script>
+</body>
+</html>
