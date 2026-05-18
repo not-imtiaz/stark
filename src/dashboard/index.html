@@ -1,1063 +1,1668 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="scroll-smooth dark" lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>STARK - AI Agent Interface</title>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>STARK AI - Central Command</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet" />
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "dark-bg": "#0b0e14",
+                        "dark-surface": "#151921",
+                        "dark-border": "#2d333d",
+                        "primary": "#b4c5ff",
+                        "surface-variant": "#32343d",
+                        "on-surface": "#e1e2ed",
+                        "on-surface-variant": "#c3c6d7",
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
 
-:root {
-  --bg: #0f1117;
-  --surface: #1a1d24;
-  --surface-light: #252932;
-  --border: #2d313a;
-  --cyan: #00d4ff;
-  --cyan-dim: rgba(0,212,255,0.15);
-  --green: #10b981;
-  --red: #ef4444;
-  --orange: #f59e0b;
-  --purple: #8b5cf6;
-  --text: #e2e8f0;
-  --text-dim: #94a3b8;
-  --text-dark: #64748b;
-}
+        .google-card {
+            background: #FFFFFF;
+            border: 1px solid #e0e0e0;
+            border-radius: 20px;
+            box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .3), 0 1px 3px 1px rgba(60, 64, 67, .15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  height: 100vh;
-  overflow: hidden;
-}
+        .dark .google-card {
+            background: #151921;
+            border-color: #2d333d;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
 
-.app {
-  display: grid;
-  grid-template-columns: 320px 1fr 360px;
-  height: 100vh;
-  gap: 1px;
-  background: var(--border);
-}
+        .google-card:hover {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 4px 8px 3px rgba(60, 64, 67, .15), 0 1px 3px rgba(60, 64, 67, .3);
+        }
 
-/* Left Panel */
-.left-panel {
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
+        .dark .google-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+        }
 
-.panel-header {
-  padding: 20px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-light);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+        .message-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
 
-.panel-header h2 {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--cyan);
-}
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
 
-/* Profile Section - Bottom Left */
-.profile-section {
-  margin-top: auto;
-  padding: 16px;
-  border-top: 1px solid var(--border);
-  background: var(--surface-light);
-  cursor: pointer;
-  transition: all 0.2s;
-}
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-.profile-section:hover {
-  background: var(--border);
-}
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #5f6368;
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
 
-.profile-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
+        .dark .typing-dot {
+            background: #8d90a0;
+        }
 
-.profile-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--cyan-dim);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--cyan);
-}
+        .typing-dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
 
-.profile-info {
-  flex: 1;
-}
+        .typing-dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
 
-.profile-name {
-  font-size: 14px;
-  font-weight: 600;
-}
+        @keyframes bounce {
 
-.profile-email {
-  font-size: 11px;
-  color: var(--text-dim);
-}
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
 
-.profile-menu {
-  display: none;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
+            40% {
+                transform: scale(1.0);
+            }
+        }
 
-.profile-menu.show {
-  display: block;
-}
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
 
-.menu-item {
-  padding: 10px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
 
-.menu-item:hover {
-  background: var(--border);
-}
+        ::-webkit-scrollbar-thumb {
+            background: #dadce0;
+            border-radius: 10px;
+        }
 
-.menu-item.active {
-  background: var(--cyan-dim);
-  color: var(--cyan);
-}
+        .dark ::-webkit-scrollbar-thumb {
+            background: #2d333d;
+        }
 
-/* Stats */
-.stats-widget {
-  padding: 20px;
-  border-bottom: 1px solid var(--border);
-}
+        .modal-backdrop {
+            background-color: rgba(32, 33, 36, 0.6);
+            backdrop-filter: blur(4px);
+            transition: opacity 0.3s ease;
+        }
 
-.stat-item { margin-bottom: 24px; }
-.stat-label {
-  font-size: 12px;
-  color: var(--text-dim);
-  margin-bottom: 8px;
-  display: flex;
-  justify-content: space-between;
-}
-.stat-bar {
-  height: 6px;
-  background: var(--border);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.stat-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.5s ease;
-}
-.stat-fill.cpu { background: var(--cyan); }
-.stat-fill.ram { background: var(--purple); }
-.stat-fill.disk { background: var(--green); }
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  margin-top: 8px;
-  font-family: monospace;
-}
+        .dark .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.75);
+        }
 
-/* Agents */
-.agents-widget { padding: 16px; }
-.agent-card {
-  background: var(--surface-light);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
-  border: 1px solid var(--border);
-}
-.agent-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-.agent-name { font-size: 14px; font-weight: 700; }
-.agent-name.morgan { color: var(--cyan); }
-.agent-name.peter { color: var(--purple); }
-.agent-name.harley { color: var(--orange); }
-.agent-name.ultron { color: var(--red); }
-.status-badge {
-  font-size: 10px;
-  padding: 4px 8px;
-  border-radius: 20px;
-  font-weight: 500;
-}
-.status-idle { background: var(--border); color: var(--text-dim); }
-.status-active { background: rgba(16,185,129,0.15); color: var(--green); }
-.agent-stats {
-  display: flex;
-  justify-content: space-between;
-  margin: 12px 0;
-  padding: 8px 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.stat { text-align: center; flex: 1; }
-.stat .value { font-size: 16px; font-weight: 700; }
-.stat .label { font-size: 9px; color: var(--text-dark); margin-top: 2px; }
-.kids-list {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-}
-.kid {
-  font-size: 9px;
-  padding: 2px 8px;
-  background: var(--bg);
-  border-radius: 4px;
-  color: var(--text-dim);
-}
+        /* Fix modal button dark mode */
+        .modal-btn-danger {
+            background: transparent;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            border-radius: 10px;
+            padding: 6px 14px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
 
-/* Chat */
-.center-panel {
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-.chat-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-light);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-}
-.chat-header h1 { font-size: 18px; font-weight: 700; }
-.chat-header h1 span { color: var(--cyan); }
-.mute-btn {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.mute-btn.muted { background: var(--red); border-color: var(--red); color: white; }
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  scroll-behavior: smooth;
-}
-.message {
-  display: flex;
-  gap: 12px;
-  max-width: 95%;
-  animation: fadeIn 0.3s ease;
-}
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.message.user { align-self: flex-end; flex-direction: row-reverse; }
-.message.assistant { align-self: flex-start; }
-.message-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.message.user .message-avatar { background: var(--cyan-dim); color: var(--cyan); }
-.message.assistant .message-avatar {
-  background: var(--surface-light);
-  color: var(--text-dim);
-  border: 1px solid var(--border);
-}
-.message-content {
-  background: var(--surface-light);
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.6;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-  border: 1px solid var(--border);
-  max-width: 100%;
-}
-.message.user .message-content { background: var(--cyan-dim); border-color: var(--cyan-dim); }
-.typing-indicator .message-content { padding: 12px 16px; }
-.typing { display: flex; gap: 4px; align-items: center; }
-.typing span {
-  width: 6px;
-  height: 6px;
-  background: var(--text-dim);
-  border-radius: 50%;
-  animation: typing 1.4s infinite;
-}
-.typing span:nth-child(2) { animation-delay: 0.2s; }
-.typing span:nth-child(3) { animation-delay: 0.4s; }
-@keyframes typing {
-  0%,60%,100% { transform: translateY(0); }
-  30% { transform: translateY(-8px); }
-}
-.chat-input-area {
-  padding: 16px 20px;
-  border-top: 1px solid var(--border);
-  background: var(--surface-light);
-  display: flex;
-  gap: 12px;
-  flex-shrink: 0;
-}
-.chat-input {
-  flex: 1;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 16px;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 14px;
-  outline: none;
-  resize: none;
-}
-.chat-input:focus { border-color: var(--cyan); }
-.send-btn {
-  background: var(--cyan);
-  border: none;
-  border-radius: 12px;
-  padding: 0 24px;
-  color: var(--bg);
-  font-weight: 600;
-  cursor: pointer;
-}
-.voice-btn {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 0 16px;
-  color: var(--text);
-  cursor: pointer;
-  font-size: 18px;
-}
-.voice-btn.listening { background: var(--red); animation: pulse 1s infinite; }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .modal-btn-danger:hover {
+            background: #ef4444;
+            color: white;
+        }
 
-/* Task Log */
-.right-panel {
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-.task-header-actions {
-  display: flex;
-  gap: 8px;
-}
-.icon-btn {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 11px;
-}
-.icon-btn:hover {
-  background: var(--cyan-dim);
-  color: var(--cyan);
-  border-color: var(--cyan);
-}
-.task-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-}
-.task-item {
-  background: var(--surface-light);
-  border-radius: 10px;
-  padding: 14px;
-  margin-bottom: 10px;
-  border-left: 3px solid var(--cyan);
-  cursor: pointer;
-}
-.task-item:hover { background: var(--border); }
-.task-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-.task-type {
-  font-size: 9px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-.task-type.knowledge { background: var(--purple); color: white; }
-.task-type.action { background: var(--orange); color: white; }
-.task-type.conversation { background: var(--border); color: var(--text-dim); }
-.task-time { font-size: 10px; color: var(--text-dark); }
-.task-query {
-  font-size: 12px;
-  font-weight: 500;
-  margin-bottom: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.task-footer {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-}
-.task-status.success { color: var(--green); }
-.task-status.error { color: var(--red); }
-.empty-state {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--text-dark);
-  font-size: 13px;
-}
+        .modal-btn-primary {
+            background: #2563eb;
+            color: white;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            width: 100%;
+            margin-top: 16px;
+            transition: background 0.2s;
+        }
 
-/* Modals */
-.modal {
-  display: none;
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.8);
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.modal-content {
-  background: var(--surface);
-  border-radius: 16px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80%;
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-.modal-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  background: var(--surface-light);
-}
-.modal-body {
-  padding: 20px;
-  overflow-y: auto;
-  max-height: 60vh;
-  font-size: 14px;
-  line-height: 1.6;
-}
-.modal-close { cursor: pointer; font-size: 24px; color: var(--text-dim); }
+        .modal-btn-primary:hover {
+            background: #1d4ed8;
+        }
 
-/* Memory List */
-.memory-item {
-  background: var(--surface-light);
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  border: 1px solid var(--border);
-}
-.memory-key {
-  font-weight: 600;
-  color: var(--cyan);
-  margin-bottom: 4px;
-}
-.memory-value {
-  font-size: 13px;
-  color: var(--text-dim);
-}
-.delete-memory {
-  float: right;
-  background: none;
-  border: none;
-  color: var(--red);
-  cursor: pointer;
-  font-size: 12px;
-}
+        .modal-input {
+            width: 100%;
+            padding: 8px 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 14px;
+            background: white;
+            color: #111;
+            outline: none;
+            transition: border 0.2s;
+        }
 
-/* Profile Form */
-.profile-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.form-group label {
-  font-size: 11px;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-.form-group input {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 14px;
-}
-.form-group input:focus {
-  outline: none;
-  border-color: var(--cyan);
-}
-.save-btn {
-  background: var(--cyan);
-  border: none;
-  border-radius: 8px;
-  padding: 12px;
-  color: var(--bg);
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 8px;
-}
+        .dark .modal-input {
+            background: #0b0e14;
+            border-color: #2d333d;
+            color: #e1e2ed;
+        }
 
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: var(--border); }
-::-webkit-scrollbar-thumb { background: var(--cyan); border-radius: 3px; }
-</style>
+        .modal-input:focus {
+            border-color: #3b82f6;
+        }
+
+        /* WS reconnect flash */
+        @keyframes reconnectPulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .ws-reconnecting {
+            animation: reconnectPulse 0.8s ease infinite;
+        }
+
+        /* Avatar initials */
+        .avatar-initials {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 13px;
+            border: 2px solid white;
+        }
+
+        .dark .avatar-initials {
+            border-color: #151921;
+        }
+
+        /* Task status badges */
+        .badge-success {
+            color: #16a34a;
+            font-weight: 700;
+            font-size: 9px;
+            text-transform: uppercase;
+        }
+
+        .badge-error {
+            color: #dc2626;
+            font-weight: 700;
+            font-size: 9px;
+            text-transform: uppercase;
+        }
+
+        /* Archive task item hover */
+        .archive-task {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .archive-task:hover {
+            border-color: #3b82f6 !important;
+        }
+
+        .dark .archive-task:hover {
+            border-color: #3b82f6 !important;
+        }
+
+        /* Kid pills */
+        .kid-pill {
+            padding: 2px 6px;
+            background: #f1f5f9;
+            color: #64748b;
+            border-radius: 4px;
+            font-size: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .dark .kid-pill {
+            background: #2d333d;
+            color: #9ca3af;
+        }
+
+        /* Slide up modal animation */
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #modal-container {
+            animation: slideUp 0.25s ease-out;
+        }
+
+        /* Agent detail modal — wider */
+        #modal-container.agent-modal {
+            max-width: 680px;
+        }
+
+        /* Agent detail styles */
+        .agent-detail-header {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding-bottom: 20px;
+            margin-bottom: 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .dark .agent-detail-header {
+            border-bottom-color: #2d333d;
+        }
+
+        .agent-detail-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .agent-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid;
+            margin-left: auto;
+        }
+
+        .agent-stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            border-bottom: 1px solid #f1f5f9;
+            margin: 0 -32px;
+            padding: 0 32px;
+        }
+
+        .dark .agent-stats-row {
+            border-bottom-color: #2d333d;
+        }
+
+        .agent-stat-cell {
+            padding: 16px 0;
+            border-right: 1px solid #f1f5f9;
+            text-align: center;
+        }
+
+        .dark .agent-stat-cell {
+            border-right-color: #2d333d;
+        }
+
+        .agent-stat-cell:last-child {
+            border-right: none;
+        }
+
+        .agent-stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #9ca3af;
+            margin-bottom: 4px;
+        }
+
+        .agent-stat-value {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .agent-stat-sub {
+            font-size: 10px;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .agent-detail-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            padding-top: 20px;
+        }
+
+        .agent-section-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #9ca3af;
+            margin-bottom: 12px;
+        }
+
+        .kid-detail-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #f1f5f9;
+            transition: border-color 0.2s;
+        }
+
+        .dark .kid-detail-card {
+            background: #0b0e14;
+            border-color: #2d333d;
+        }
+
+        .kid-detail-card:hover {
+            border-color: #93c5fd;
+        }
+
+        .dark .kid-detail-card:hover {
+            border-color: #3b82f6;
+        }
+
+        .kid-detail-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .kid-detail-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .dark .kid-detail-name {
+            color: #e1e2ed;
+        }
+
+        .kid-detail-task {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 1px;
+        }
+
+        .kid-status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .perf-bar-row {
+            margin-bottom: 14px;
+        }
+
+        .perf-bar-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .perf-bar-label {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .dark .perf-bar-label {
+            color: #9ca3af;
+        }
+
+        .perf-bar-val {
+            font-size: 12px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .dark .perf-bar-val {
+            color: #e1e2ed;
+        }
+
+        .perf-bar-track {
+            height: 6px;
+            background: #f1f5f9;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .dark .perf-bar-track {
+            background: #2d333d;
+        }
+
+        .perf-bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .activity-block {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            margin: 1px;
+        }
+    </style>
 </head>
-<body>
-<div class="app">
-  <!-- LEFT PANEL -->
-  <div class="left-panel">
-    <div class="panel-header">
-      <h2>⚡ SYSTEM MONITOR</h2>
-    </div>
-    <div class="stats-widget" id="statsWidget">
-      <!-- Stats will be populated via JS -->
-    </div>
-    <div class="panel-header">
-      <h2>🤖 DAUGHTER AGENTS</h2>
-    </div>
-    <div class="agents-widget" id="agentsWidget"></div>
 
-    <!-- Profile Section - Bottom -->
-    <div class="profile-section" id="profileSection">
-      <div class="profile-header" id="profileHeader">
-        <div class="profile-avatar" id="profileAvatar">👤</div>
-        <div class="profile-info">
-          <div class="profile-name" id="profileName">User</div>
-          <div class="profile-email" id="profileEmail">Set up profile</div>
+<body class="h-screen overflow-hidden flex flex-col bg-white text-gray-900 dark:bg-dark-bg dark:text-on-surface">
+
+    <!-- Header -->
+    <header
+        class="h-16 flex items-center justify-between px-6 border-b border-gray-100 bg-white z-20 dark:bg-dark-surface dark:border-dark-border">
+        <div class="flex items-center gap-3">
+            <button
+                class="p-2 -ml-2 mr-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors dark:hover:bg-dark-border dark:text-gray-400"
+                id="sidebar-toggle">
+                <i class="ri-menu-line text-xl"></i>
+            </button>
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
+            <h1 class="text-xl font-medium tracking-tight dark:text-white">STARK AI</h1>
+            <span class="text-xs font-medium text-gray-400 ml-2 dark:text-gray-500">CENTRAL COMMAND</span>
         </div>
-        <div style="color: var(--text-dim);">▼</div>
-      </div>
-      <div class="profile-menu" id="profileMenu">
-        <div class="menu-item" data-action="profile">
-          <span>👤</span> My Profile
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-xs font-medium border border-red-100 transition-colors dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50"
+                id="connection-status">
+                <span class="w-2 h-2 rounded-full bg-current" id="status-dot"></span>
+                <span id="status-text">DISCONNECTED</span>
+            </div>
+            <div class="flex items-center gap-4 border-l pl-6 dark:border-dark-border">
+                <div
+                    class="hidden md:flex items-center gap-2 text-sm font-medium text-gray-500 mr-2 dark:text-gray-400">
+                    <i class="ri-time-line text-blue-500"></i>
+                    <span id="header-clock">--:--:--</span>
+                </div>
+                <!-- Clear Chat Button -->
+                <button
+                    class="text-gray-500 hover:text-red-500 transition-colors dark:text-gray-400 dark:hover:text-red-400"
+                    onclick="clearChat()" title="Clear Chat">
+                    <i class="ri-chat-delete-line text-xl"></i>
+                </button>
+                <button
+                    class="text-gray-500 hover:text-blue-600 transition-colors dark:text-gray-400 dark:hover:text-blue-400"
+                    onclick="toggleShortcutsModal()" title="Keyboard Shortcuts (Cmd+/)">
+                    <i class="ri-keyboard-line text-xl"></i>
+                </button>
+                <button
+                    class="text-gray-500 hover:text-blue-600 transition-colors dark:text-gray-400 dark:hover:text-blue-400"
+                    id="theme-toggle" title="Toggle Theme (Cmd+D)">
+                    <i class="ri-sun-line text-xl dark:hidden"></i>
+                    <i class="ri-moon-line text-xl hidden dark:block"></i>
+                </button>
+                <!-- Profile Avatar -->
+                <div class="relative group cursor-pointer" onclick="openProfileModal()" id="profile-avatar-wrap">
+                    <div class="avatar-initials" id="profile-avatar">?</div>
+                </div>
+            </div>
         </div>
-        <div class="menu-item" data-action="memory">
-          <span>🧠</span> Memory (Saved Facts)
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Sidebar -->
+        <aside
+            class="w-72 border-r border-gray-100 flex flex-col bg-gray-50/30 transition-all duration-300 ease-in-out dark:bg-dark-bg dark:border-dark-border overflow-hidden"
+            id="left-sidebar">
+            <div class="p-6 flex-1 flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between mb-4 flex-shrink-0">
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">Task
+                        Activity</h3>
+                    <button
+                        class="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold text-blue-600 hover:bg-blue-50 rounded transition-colors uppercase tracking-tight dark:text-blue-400 dark:hover:bg-blue-900/20"
+                        onclick="openArchiveModal()">
+                        <i class="ri-history-line text-xs"></i> View Previous
+                    </button>
+                </div>
+                <div class="space-y-3 overflow-y-auto pr-2" id="task-log">
+                    <p class="text-xs text-gray-400 text-center italic py-4">Awaiting connection...</p>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-100 bg-gray-50/50 dark:bg-dark-surface/50 dark:border-dark-border">
+                <div class="google-card p-4">
+                    <h4 class="text-xs font-bold text-gray-400 mb-3 uppercase">Quick Menu</h4>
+                    <div class="space-y-1">
+                        <button
+                            class="w-full flex items-center gap-3 p-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors dark:text-gray-400 dark:hover:bg-dark-border"
+                            onclick="openProfileModal()">
+                            <i class="ri-user-settings-line"></i> My Profile
+                        </button>
+                        <button
+                            class="w-full flex items-center gap-3 p-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors dark:text-gray-400 dark:hover:bg-dark-border"
+                            onclick="openMemoryModal()">
+                            <i class="ri-brain-line"></i> Neural Memory
+                        </button>
+                        <button
+                            class="w-full flex items-center gap-3 p-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors dark:text-gray-400 dark:hover:bg-dark-border"
+                            onclick="openArchiveModal()">
+                            <i class="ri-history-line"></i> Archive
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat -->
+        <main class="flex-1 flex flex-col relative bg-white transition-colors dark:bg-dark-bg">
+            <div class="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth" id="chat-container">
+                <div class="flex justify-start message-fade-in">
+                    <div
+                        class="max-w-[80%] bg-gray-100 text-gray-800 rounded-2xl rounded-tl-none p-4 shadow-sm dark:bg-dark-surface dark:text-gray-200">
+                        <p class="text-sm leading-relaxed">System online. All daughter agents reporting green status.
+                            How can I assist you today?</p>
+                        <div class="mt-1 text-[10px] text-gray-400 text-left dark:text-gray-500">System Core • Online
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Typing Indicator -->
+            <div class="hidden px-8 py-2" id="typing-indicator">
+                <div class="flex items-center gap-2 text-gray-400 text-sm dark:text-gray-500">
+                    <span class="font-medium">STARK is thinking</span>
+                    <div class="flex gap-1">
+                        <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+                    </div>
+                </div>
+            </div>
+            <!-- Input -->
+            <div
+                class="p-6 border-t border-gray-100 bg-white transition-colors dark:bg-dark-bg dark:border-dark-border">
+                <div
+                    class="max-w-4xl mx-auto flex items-center gap-3 bg-gray-50 rounded-2xl p-2 pr-4 focus-within:ring-2 focus-within:ring-blue-100 focus-within:bg-white transition-all dark:bg-dark-surface dark:focus-within:ring-blue-900/30 dark:focus-within:bg-dark-surface">
+                    <button
+                        class="w-10 h-10 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-200 transition-colors dark:text-gray-400 dark:hover:bg-dark-border"
+                        id="mic-btn" title="Voice Input">
+                        <i class="ri-mic-line text-xl"></i>
+                    </button>
+                    <input
+                        class="flex-1 bg-transparent border-none focus:ring-0 text-gray-700 py-3 text-base dark:text-white dark:placeholder:text-gray-600"
+                        id="command-input" placeholder="Send a command to STARK..." type="text" />
+                    <button
+                        class="w-10 h-10 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-200 transition-colors dark:text-gray-400 dark:hover:bg-dark-border"
+                        id="speaker-btn" title="Toggle Text-to-Speech">
+                        <i class="ri-volume-up-line text-xl" id="speaker-icon"></i>
+                    </button>
+                    <button
+                        class="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-shadow shadow-md"
+                        id="send-btn">
+                        <i class="ri-send-plane-2-line text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Panel -->
+        <aside
+            class="w-80 border-l border-gray-100 bg-gray-50/30 p-6 space-y-6 overflow-y-auto transition-colors dark:bg-dark-bg dark:border-dark-border">
+            <section>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 dark:text-gray-400">System
+                    Monitor</h3>
+                <div class="google-card p-5 space-y-4">
+                    <div>
+                        <div class="flex justify-between text-xs font-medium mb-1.5 text-gray-600 dark:text-gray-400">
+                            <span>CPU LOAD</span><span id="cpu-val">0%</span></div>
+                        <div class="h-2 bg-gray-100 rounded-full overflow-hidden dark:bg-dark-border">
+                            <div class="h-full bg-blue-500 transition-all duration-500" id="cpu-bar" style="width: 0%">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-medium mb-1.5 text-gray-600 dark:text-gray-400">
+                            <span>RAM USAGE</span><span id="ram-val">0/0 GB</span></div>
+                        <div class="h-2 bg-gray-100 rounded-full overflow-hidden dark:bg-dark-border">
+                            <div class="h-full bg-green-500 transition-all duration-500" id="ram-bar" style="width: 0%">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-medium mb-1.5 text-gray-600 dark:text-gray-400">
+                            <span>DISK SPACE</span><span id="disk-val">0%</span></div>
+                        <div class="h-2 bg-gray-100 rounded-full overflow-hidden dark:bg-dark-border">
+                            <div class="h-full bg-amber-500 transition-all duration-500" id="disk-bar"
+                                style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 dark:text-gray-400">
+                    Daughter Agents</h3>
+                <div class="space-y-4" id="agent-grid">
+                    <!-- Agent Morgan -->
+                    <div class="google-card p-4 cursor-pointer" id="agent-Morgan" onclick="openAgentModal('Morgan')"
+                        title="View Morgan's profile">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold dark:bg-cyan-900/20">
+                                    M</div>
+                                <div>
+                                    <h4 class="text-sm font-semibold dark:text-white">Morgan</h4>
+                                    <div class="flex gap-1 flex-wrap mt-1" id="kids-Morgan">
+                                        <span class="kid-pill">JARVIS</span>
+                                        <span class="kid-pill">FRIDAY</span>
+                                        <span class="kid-pill">Jocasta</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="w-2 h-2 rounded-full bg-green-500" id="status-dot-Morgan"></span>
+                        </div>
+                        <div
+                            class="grid grid-cols-3 gap-2 pt-3 border-t border-gray-50 dark:border-dark-border text-center">
+                            <div>
+                                <p class="text-[9px] text-gray-400 uppercase">Success</p>
+                                <p class="text-xs font-bold text-gray-700 dark:text-gray-300" id="stat-success-Morgan">
+                                    --</p>
+                            </div>
+                            <div class="border-x border-gray-50 dark:border-dark-border">
+                                <p class="text-[9px] text-gray-400 uppercase">Avg</p>
+                                <p class="text-xs font-bold text-gray-700 dark:text-gray-300" id="stat-avg-Morgan">--
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-[9px] text-gray-400 uppercase">Tasks</p>
+                                <p class="text-xs font-bold text-gray-700 dark:text-gray-300" id="stat-tasks-Morgan">--
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Agent Peter -->
+                    <div class="google-card p-4 cursor-pointer" id="agent-Peter" onclick="openAgentModal('Peter')"
+                        title="View Peter's profile">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold dark:bg-purple-900/20">
+                                    P</div>
+                                <div>
+                                    <h4 class="text-sm font-semibold dark:text-white">Peter</h4>
+                                    <div class="flex gap-1 flex-wrap mt-1" id="kids-Peter">
+                                        <span class="kid-pill">Karen</span>
+                                        <span class="kid-pill">Ned</span>
+                                        <span class="kid-pill">Miles</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="w-2 h-2 rounded-full bg-green-500" id="status-dot-Peter"></span>
+                        </div>
+                        <div
+                            class="grid grid-cols-3 gap-2 pt-3 border-t border-gray-50 dark:border-dark-border text-center">
+                            <div>
+                                <p class="text-[9px] text-gray-400 uppercase">Success</p>
+                                <p class="text-xs font-bold text-gray-700 dark:text-gray-300" id="stat-success-Peter">--
+                                </p>
+                            </div>
+                            <div class="border-x border-gray-50 dark:border-dark-border">
+                                <p class="text-[9px] text-gray-400 uppercase">Avg</p>
+                                <p class="text-xs font-bold text-gray-700 dark:text-gray-300" id="stat-avg-Peter">--</p>
+                            </div>
+                            <div>
+                                <p class="text-[9px] text-gray-400 uppercase">Tasks</p>
+                                <p class="text-xs font-bold text-gray-700 dark:text-gray-300" id="stat-tasks-Peter">--
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Agent Harley -->
+                    <div class="google-card p-4 cursor-pointer" id="agent-Harley" onclick="openAgentModal('Harley')"
+                        title="View Harley's profile">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold dark:bg-orange-900/20">
+                                    H</div>
+                                <div>
+                                    <h4 class="text-sm font-semibold dark:text-white">Harley</h4>
+                                    <div class="flex gap-1 flex-wrap mt-1" id="kids-Harley">
+                                        <span class="kid-pill">Groot</span>
+                                        <span class="kid-pill">Rover</span>
+                                        <span class="kid-pill">Parker</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="w-2 h-2 rounded-full bg-green-500" id="status-dot-Harley"></span>
+                        </div>
+                        <div
+                            class="grid grid-cols-3 gap-2 pt-3 border-t border-gray-50 dark:border-dark-border text-center">
+                            <div>
+                                <p class="text-[9px] text-gray-400 uppercase">Success</p>
+                                <p class="text-xs font-bold text-gray-700 dark:text-gray-300" id="stat-success-Harley">
+                                    --</p>
+                            </div>
+                            <div class="border-x border-gray-50 dark:border-dark-border">
+                                <p class="text-[9px] text-gray-400 uppercase">Avg</p>
+                                <p class="text-xs font-bold text-gray-700 dark:text-gray-300" id="stat-avg-Harley">--
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-[9px] text-gray-400 uppercase">Tasks</p>
+                                <p class="text-xs font-bold text-gray-700 dark:text-gray-300" id="stat-tasks-Harley">--
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Agent Ultron -->
+                    <div class="google-card p-4 cursor-pointer border-red-100/50" id="agent-Ultron"
+                        onclick="openAgentModal('Ultron')" title="View Ultron's profile">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-bold dark:bg-red-900/20">
+                                    U</div>
+                                <div>
+                                    <h4 class="text-sm font-semibold dark:text-white">Ultron</h4>
+                                    <div class="flex gap-1 flex-wrap mt-1" id="kids-Ultron">
+                                        <span class="kid-pill">Vision</span>
+                                        <span class="kid-pill">Nexus</span>
+                                        <span class="kid-pill">Sentry</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="w-2 h-2 rounded-full bg-amber-500" id="status-dot-Ultron"></span>
+                        </div>
+                        <div
+                            class="grid grid-cols-3 gap-2 pt-3 border-t border-gray-50 dark:border-dark-border text-center">
+                            <div>
+                                <p class="text-[9px] text-gray-400 uppercase">Success</p>
+                                <p class="text-xs font-bold text-gray-700 dark:text-gray-300" id="stat-success-Ultron">
+                                    --</p>
+                            </div>
+                            <div class="border-x border-gray-50 dark:border-dark-border">
+                                <p class="text-[9px] text-gray-400 uppercase">Avg</p>
+                                <p class="text-xs font-bold text-gray-700 dark:text-gray-300" id="stat-avg-Ultron">--
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-[9px] text-gray-400 uppercase">Tasks</p>
+                                <p class="text-xs font-bold text-gray-700 dark:text-gray-300" id="stat-tasks-Ultron">--
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </aside>
+    </div>
+
+    <!-- Modals Wrapper -->
+    <div class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop" id="modal-wrapper">
+        <div class="google-card w-full max-w-lg p-8 relative max-h-[90vh] overflow-hidden flex flex-col"
+            id="modal-container">
+            <button class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10 dark:hover:text-white"
+                onclick="closeAllModals()">
+                <i class="ri-close-line text-2xl"></i>
+            </button>
+            <div class="overflow-y-auto pr-2" id="modal-content"></div>
         </div>
-        <div class="menu-item" data-action="tasks">
-          <span>📋</span> Previous Tasks
-        </div>
-      </div>
     </div>
-  </div>
 
-  <!-- CENTER PANEL - CHAT -->
-  <div class="center-panel">
-    <div class="chat-header">
-      <h1>STARK <span>AI Agent</span></h1>
-      <button class="mute-btn" id="muteBtn">🔊 Voice ON</button>
-    </div>
-    <div class="chat-messages" id="chatMessages">
-      <div class="message assistant">
-        <div class="message-avatar">⚡</div>
-        <div class="message-content">Hello, I'm STARK. How can I help you today?</div>
-      </div>
-    </div>
-    <div class="chat-input-area">
-      <textarea class="chat-input" id="chatInput" placeholder="Type your message..." rows="1"></textarea>
-      <button class="voice-btn" id="voiceBtn">🎤</button>
-      <button class="send-btn" id="sendBtn">Send</button>
-    </div>
-  </div>
+    <script>
+        // ─── Core State ──────────────────────────────────────────────────────────────
+        const API_URL = 'http://localhost:5000';
+        let socket;
+        let ttsEnabled = localStorage.getItem('tts_enabled') === 'true';
+        let darkMode = localStorage.getItem('stark_theme') !== 'light';
 
-  <!-- RIGHT PANEL - TASK LOG -->
-  <div class="right-panel">
-    <div class="panel-header">
-      <h2>📋 TASK LOG</h2>
-      <div class="task-header-actions">
-        <button class="icon-btn" id="viewAllTasksBtn" title="View All Tasks">📋 All</button>
-        <button class="icon-btn" id="clearTasksBtn" title="Clear Tasks">🗑️ Clear</button>
-      </div>
-    </div>
-    <div class="task-list" id="taskList"></div>
-  </div>
-</div>
+        // ─── Agent Kids Config ────────────────────────────────────────────────────────
+        const AGENT_KIDS = {
+            'Morgan': ['JARVIS', 'FRIDAY', 'Jocasta'],
+            'Peter': ['Karen', 'Ned', 'Miles'],
+            'Harley': ['Groot', 'Rover', 'Parker'],
+            'Ultron': ['Vision', 'Nexus', 'Sentry']
+        };
 
-<!-- Modal Container -->
-<div id="modal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <strong id="modalTitle">Modal Title</strong>
-      <span class="modal-close" onclick="closeModal()">&times;</span>
-    </div>
-    <div class="modal-body" id="modalBody"></div>
-  </div>
-</div>
+        // ─── Theme ───────────────────────────────────────────────────────────────────
+        const themeToggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
 
-<script>
-// ============================================
-// STARK Dashboard - Complete Feature Set
-// ============================================
+        function applyTheme() {
+            if (darkMode) {
+                html.classList.add('dark');
+                localStorage.setItem('stark_theme', 'dark');
+            } else {
+                html.classList.remove('dark');
+                localStorage.setItem('stark_theme', 'light');
+            }
+        }
 
-// State
-let voiceEnabled = true;
-let socket = null;
-let currentUtterance = null;
-let isListening = false;
-let recognition = null;
-let userProfile = {
-  name: "User",
-  email: "",
-  phone: "",
-  instagram: ""
-};
+        themeToggle.onclick = () => {
+            darkMode = !darkMode;
+            applyTheme();
+            appendMessage('System', `Visual theme switched to ${darkMode ? 'Dark' : 'Light'} mode.`);
+        };
 
-// DOM Elements
-const chatMessages = document.getElementById('chatMessages');
-const chatInput = document.getElementById('chatInput');
-const sendBtn = document.getElementById('sendBtn');
-const voiceBtn = document.getElementById('voiceBtn');
-const muteBtn = document.getElementById('muteBtn');
-const taskList = document.getElementById('taskList');
-const agentsWidget = document.getElementById('agentsWidget');
-const statsWidget = document.getElementById('statsWidget');
-const profileSection = document.getElementById('profileSection');
-const profileMenu = document.getElementById('profileMenu');
-const profileHeader = document.getElementById('profileHeader');
-const profileName = document.getElementById('profileName');
-const profileEmail = document.getElementById('profileEmail');
-const profileAvatar = document.getElementById('profileAvatar');
+        // ─── WebSocket ───────────────────────────────────────────────────────────────
+        function initSocket() {
+            try {
+                socket = io(API_URL, { timeout: 5000, reconnectionAttempts: 5 });
+            } catch (e) {
+                // socket.io not available or connection refused — fall back to polling only
+                console.warn('WebSocket init failed, using REST polling only:', e);
+                fetchInitialData();
+                startPolling();
+                return;
+            }
 
-// Load saved profile
-function loadProfile() {
-  const saved = localStorage.getItem('stark_user_profile');
-  if (saved) {
-    userProfile = JSON.parse(saved);
-    profileName.textContent = userProfile.name;
-    profileEmail.textContent = userProfile.email || "No email set";
-    profileAvatar.textContent = userProfile.name.charAt(0).toUpperCase();
-  }
-}
+            socket.on('connect', () => {
+                updateStatusUI('connected');
+                fetchInitialData();
+                startPolling(); // keep polling as backup even when WS is connected
+                appendMessage('System', 'Neural link established. All systems nominal.');
+            });
 
-function saveProfile() {
-  localStorage.setItem('stark_user_profile', JSON.stringify(userProfile));
-  profileName.textContent = userProfile.name;
-  profileEmail.textContent = userProfile.email || "No email set";
-  profileAvatar.textContent = userProfile.name.charAt(0).toUpperCase();
-}
+            socket.on('connect_error', () => {
+                // WS can't reach backend — still try REST
+                updateStatusUI('disconnected');
+                fetchInitialData();
+                startPolling();
+            });
 
-// Profile menu toggle
-profileHeader.addEventListener('click', (e) => {
-  e.stopPropagation();
-  profileMenu.classList.toggle('show');
-});
+            socket.on('disconnect', () => {
+                updateStatusUI('disconnected');
+            });
 
-document.addEventListener('click', () => {
-  profileMenu.classList.remove('show');
-});
+            socket.on('reconnecting', () => {
+                updateStatusUI('reconnecting');
+            });
 
-profileMenu.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const action = e.target.closest('.menu-item')?.dataset.action;
-  if (action === 'profile') {
-    showProfileModal();
-  } else if (action === 'memory') {
-    showMemoryModal();
-  } else if (action === 'tasks') {
-    showAllTasksModal();
-  }
-  profileMenu.classList.remove('show');
-});
+            socket.on('reconnect', () => {
+                updateStatusUI('connected');
+                fetchInitialData();
+                appendMessage('System', 'WebSocket reconnected. Resuming data streams.');
+            });
 
-// Profile Modal
-function showProfileModal() {
-  document.getElementById('modalTitle').textContent = '👤 My Profile';
-  document.getElementById('modalBody').innerHTML = `
-    <div class="profile-form">
-      <div class="form-group">
-        <label>Your Name</label>
-        <input type="text" id="profileNameInput" value="${userProfile.name}" placeholder="Enter your name">
-      </div>
-      <div class="form-group">
-        <label>Email / Gmail</label>
-        <input type="email" id="profileEmailInput" value="${userProfile.email}" placeholder="your@email.com">
-      </div>
-      <div class="form-group">
-        <label>Phone Number</label>
-        <input type="tel" id="profilePhoneInput" value="${userProfile.phone}" placeholder="+1234567890">
-      </div>
-      <div class="form-group">
-        <label>Instagram</label>
-        <input type="text" id="profileIgInput" value="${userProfile.instagram}" placeholder="@username">
-      </div>
-      <button class="save-btn" onclick="saveProfileModal()">Save Changes</button>
-    </div>
-  `;
-  document.getElementById('modal').style.display = 'flex';
-}
+            // WebSocket real-time events — fire immediately when backend pushes them
+            socket.on('system_metrics', (data) => updateMetricsUI(data));
+            socket.on('agent_update', (agents) => updateAgentCards(agents));
+            socket.on('task_update', (task) => prependTask(task));
+        }
 
-function saveProfileModal() {
-  userProfile.name = document.getElementById('profileNameInput')?.value || userProfile.name;
-  userProfile.email = document.getElementById('profileEmailInput')?.value || '';
-  userProfile.phone = document.getElementById('profilePhoneInput')?.value || '';
-  userProfile.instagram = document.getElementById('profileIgInput')?.value || '';
-  saveProfile();
-  closeModal();
-  showToast('Profile saved successfully!');
-}
+        function updateStatusUI(state) {
+            const el = document.getElementById('connection-status');
+            const txt = document.getElementById('status-text');
+            const dot = document.getElementById('status-dot');
 
-// Memory Modal - Show saved facts
-async function showMemoryModal() {
-  try {
-    const response = await fetch('/api/memory');
-    const memories = await response.json();
-    
-    if (Object.keys(memories).length === 0) {
-      document.getElementById('modalBody').innerHTML = '<div class="empty-state">No memories saved yet. Talk to STARK and he will remember things about you.</div>';
-    } else {
-      document.getElementById('modalBody').innerHTML = `
-        <div style="margin-bottom: 12px; font-size: 12px; color: var(--text-dim);">
-          Things STARK remembers about you:
-        </div>
-        ${Object.entries(memories).map(([key, value]) => `
-          <div class="memory-item">
-            <button class="delete-memory" onclick="deleteMemory('${key}')">🗑️</button>
-            <div class="memory-key">${key}</div>
-            <div class="memory-value">${value}</div>
-          </div>
-        `).join('')}
-        <button class="save-btn" onclick="clearAllMemories()" style="background: var(--red); margin-top: 12px;">Clear All Memories</button>
-      `;
-    }
-    document.getElementById('modalTitle').textContent = '🧠 STARK\'s Memory';
-    document.getElementById('modal').style.display = 'flex';
-  } catch (e) {
-    document.getElementById('modalBody').innerHTML = '<div class="empty-state">Could not load memories</div>';
-  }
-}
+            el.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors';
 
-async function deleteMemory(key) {
-  await fetch('/api/memory/delete', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key })
-  });
-  showMemoryModal();
-}
+            if (state === 'connected') {
+                el.classList.add('bg-green-50', 'text-green-600', 'border-green-100', 'dark:bg-green-950/30', 'dark:text-green-400', 'dark:border-green-900/50');
+                txt.innerText = 'CONNECTED';
+                dot.className = 'w-2 h-2 rounded-full bg-current';
+            } else if (state === 'reconnecting') {
+                el.classList.add('bg-amber-50', 'text-amber-600', 'border-amber-100', 'dark:bg-amber-950/30', 'dark:text-amber-400', 'dark:border-amber-900/50', 'ws-reconnecting');
+                txt.innerText = 'RECONNECTING';
+                dot.className = 'w-2 h-2 rounded-full bg-current';
+            } else {
+                el.classList.add('bg-red-50', 'text-red-600', 'border-red-100', 'dark:bg-red-950/30', 'dark:text-red-400', 'dark:border-red-900/50');
+                txt.innerText = 'DISCONNECTED';
+                dot.className = 'w-2 h-2 rounded-full bg-current';
+            }
+        }
 
-async function clearAllMemories() {
-  if (confirm('Clear all memories? STARK will forget everything about you.')) {
-    await fetch('/api/memory/clear', { method: 'POST' });
-    showMemoryModal();
-    showToast('All memories cleared');
-  }
-}
+        function updateMetricsUI(data) {
+            document.getElementById('cpu-bar').style.width = data.cpu + '%';
+            document.getElementById('cpu-val').innerText = data.cpu + '%';
+            document.getElementById('ram-bar').style.width = (data.ram_used / data.ram_total * 100) + '%';
+            document.getElementById('ram-val').innerText = `${data.ram_used}/${data.ram_total} GB`;
+            document.getElementById('disk-bar').style.width = data.disk + '%';
+            document.getElementById('disk-val').innerText = data.disk + '%';
+        }
 
-// All Tasks Modal
-async function showAllTasksModal() {
-  const response = await fetch('/api/tasks');
-  const tasks = await response.json();
-  
-  if (tasks.length === 0) {
-    document.getElementById('modalBody').innerHTML = '<div class="empty-state">No tasks yet. Send a command to STARK.</div>';
-  } else {
-    document.getElementById('modalBody').innerHTML = `
-      <div style="margin-bottom: 12px; font-size: 12px; color: var(--text-dim);">
-        Total ${tasks.length} tasks recorded
-      </div>
-      ${tasks.map(task => `
-        <div class="task-item" style="cursor: pointer;" onclick='showTaskDetail(${JSON.stringify(task).replace(/'/g, "&#39;")})'>
-          <div class="task-header">
-            <span class="task-type ${task.type}">${task.type || 'unknown'}</span>
-            <span class="task-time">${new Date(task.time || task.timestamp).toLocaleString()}</span>
-          </div>
-          <div class="task-query">${escapeHtml((task.query || task.intent || '').substring(0, 80))}</div>
-          <div class="task-footer">
-            <span>${task.assigned_to || 'STARK'}</span>
-            <span class="task-status ${task.status}">${task.status === 'success' ? '✓ Success' : '✗ Error'}</span>
-          </div>
-        </div>
-      `).join('')}
-    `;
-  }
-  document.getElementById('modalTitle').textContent = '📋 All Task History';
-  document.getElementById('modal').style.display = 'flex';
-}
+        // ─── Agent Cards (Real Data) ──────────────────────────────────────────────────
+        // Accepts either a single agent object or an array
+        function updateAgentCards(payload) {
+            const agents = Array.isArray(payload) ? payload : [payload];
+            agents.forEach(agent => updateSingleAgent(agent));
+        }
 
-function showTaskDetail(task) {
-  document.getElementById('modalBody').innerHTML = `
-    <strong>Query:</strong><br>${escapeHtml(task.query || task.intent)}<br><br>
-    <strong>Response:</strong><br>${escapeHtml(task.full_text || task.summary || 'No response')}<br><br>
-    <strong>Agent:</strong> ${task.assigned_to || 'STARK'}<br>
-    <strong>Status:</strong> ${task.status}<br>
-    <strong>Time:</strong> ${new Date(task.time || task.timestamp).toLocaleString()}
-  `;
-  document.getElementById('modalTitle').textContent = 'Task Details';
-  document.getElementById('modal').style.display = 'flex';
-}
+        function updateSingleAgent(agent) {
+            const name = agent.name;
+            if (!name) return;
 
-function showToast(message) {
-  const toast = document.createElement('div');
-  toast.style.position = 'fixed';
-  toast.style.bottom = '20px';
-  toast.style.right = '20px';
-  toast.style.background = 'var(--surface-light)';
-  toast.style.border = '1px solid var(--cyan)';
-  toast.style.color = 'var(--cyan)';
-  toast.style.padding = '12px 20px';
-  toast.style.borderRadius = '8px';
-  toast.style.zIndex = '2000';
-  toast.style.fontSize = '13px';
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
-}
+            // Status dot
+            const dot = document.getElementById(`status-dot-${name}`);
+            if (dot) {
+                const colorMap = { online: 'bg-green-500', offline: 'bg-red-500', busy: 'bg-amber-500', idle: 'bg-blue-500' };
+                dot.className = `w-2 h-2 rounded-full ${colorMap[agent.status] || 'bg-gray-400'}`;
+            }
 
-// Core Functions
-function scrollToBottom() {
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
+            // Stats
+            const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
 
-function speakText(text) {
-  if (!voiceEnabled) return;
-  if (!text || text.length === 0) return;
-  if (currentUtterance) window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.9;
-  utterance.pitch = 1.0;
-  currentUtterance = utterance;
-  window.speechSynthesis.speak(utterance);
-}
+            const successRate = agent.success_rate != null ? `${agent.success_rate}%` : '--';
+            const avgMs = agent.avg_response_ms != null
+                ? (agent.avg_response_ms >= 1000 ? `${(agent.avg_response_ms / 1000).toFixed(1)}s` : `${agent.avg_response_ms}ms`)
+                : '--';
+            const tasks = agent.tasks_completed != null
+                ? (agent.tasks_completed >= 1000 ? `${(agent.tasks_completed / 1000).toFixed(0)}k` : agent.tasks_completed)
+                : '--';
 
-function toggleMute() {
-  voiceEnabled = !voiceEnabled;
-  muteBtn.innerHTML = voiceEnabled ? '🔊 Voice ON' : '🔇 Voice OFF';
-  muteBtn.classList.toggle('muted', !voiceEnabled);
-  if (!voiceEnabled && currentUtterance) window.speechSynthesis.cancel();
-}
-muteBtn.addEventListener('click', toggleMute);
+            setEl(`stat-success-${name}`, successRate);
+            setEl(`stat-avg-${name}`, avgMs);
+            setEl(`stat-tasks-${name}`, tasks);
 
-function initVoiceRecognition() {
-  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    voiceBtn.style.opacity = '0.5';
-    return;
-  }
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SpeechRecognition();
-  recognition.continuous = false;
-  recognition.interimResults = false;
-  recognition.lang = 'en-US';
-  recognition.onresult = (event) => {
-    chatInput.value = event.results[0][0].transcript;
-    sendMessage();
-    stopListening();
-  };
-  recognition.onerror = () => stopListening();
-  recognition.onend = () => stopListening();
-}
+            // Kids — update from event if provided, otherwise keep static config
+            const kidsContainer = document.getElementById(`kids-${name}`);
+            if (kidsContainer && agent.kids && agent.kids.length) {
+                kidsContainer.innerHTML = agent.kids.map(k =>
+                    `<span class="kid-pill">${k}</span>`
+                ).join('');
+            } else if (kidsContainer && AGENT_KIDS[name]) {
+                // Already rendered in HTML, but ensure they're there
+                if (!kidsContainer.children.length) {
+                    kidsContainer.innerHTML = AGENT_KIDS[name].map(k =>
+                        `<span class="kid-pill">${k}</span>`
+                    ).join('');
+                }
+            }
+        }
 
-function startListening() {
-  if (!recognition) return;
-  try { recognition.start(); isListening = true; voiceBtn.classList.add('listening'); voiceBtn.textContent = '🔴'; } catch(e) {}
-}
-function stopListening() {
-  if (recognition) try { recognition.stop(); } catch(e) {}
-  isListening = false; voiceBtn.classList.remove('listening'); voiceBtn.textContent = '🎤';
-}
-voiceBtn.addEventListener('click', () => isListening ? stopListening() : startListening());
+        // ─── Task Log ────────────────────────────────────────────────────────────────
+        function buildTaskCard(t) {
+            const statusClass = t.status === 'Success' ? 'badge-success' : 'badge-error';
+            const ts = t.timestamp || '';
+            return `
+            <div onclick="openTaskDetail(${JSON.stringify(t).replace(/"/g, '&quot;')})"
+                 class="p-3 bg-white border border-gray-100 rounded-xl hover:shadow-sm hover:border-blue-100 transition-all cursor-pointer group dark:bg-dark-surface dark:border-dark-border">
+                <div class="flex justify-between mb-1">
+                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-50 text-gray-500 uppercase dark:bg-dark-bg dark:text-gray-400">${escHtml(t.type || 'TASK')}</span>
+                    <span class="text-[9px] text-gray-400">${escHtml(ts)}</span>
+                </div>
+                <p class="text-xs text-gray-600 truncate group-hover:text-blue-600 dark:text-gray-400 dark:group-hover:text-blue-400">${escHtml(t.description || '')}</p>
+                <div class="mt-1.5 flex justify-between items-center">
+                    <span class="${statusClass}">${escHtml(t.status || '')}</span>
+                    ${t.id ? `<span class="text-[9px] text-gray-300 dark:text-gray-600">${String(t.id).slice(0, 8)}</span>` : ''}
+                </div>
+            </div>`;
+        }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+        function prependTask(task) {
+            const container = document.getElementById('task-log');
+            // Remove placeholder
+            const placeholder = container.querySelector('p.italic');
+            if (placeholder) placeholder.remove();
 
-function addMessage(text, isUser = false) {
-  const div = document.createElement('div');
-  div.className = `message ${isUser ? 'user' : 'assistant'}`;
-  div.innerHTML = `<div class="message-avatar">${isUser ? '👤' : '⚡'}</div><div class="message-content">${escapeHtml(text)}</div>`;
-  chatMessages.appendChild(div);
-  scrollToBottom();
-  return div;
-}
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = buildTaskCard(task);
+            const card = wrapper.firstElementChild;
+            card.classList.add('message-fade-in');
+            container.prepend(card);
 
-function addTypingIndicator() {
-  const div = document.createElement('div');
-  div.className = 'message assistant typing-indicator';
-  div.id = 'typingIndicator';
-  div.innerHTML = `<div class="message-avatar">⚡</div><div class="typing"><span></span><span></span><span></span></div>`;
-  chatMessages.appendChild(div);
-  scrollToBottom();
-}
-function removeTypingIndicator() { const el = document.getElementById('typingIndicator'); if (el) el.remove(); }
+            // Keep only last 20 in sidebar
+            const cards = container.querySelectorAll('div[onclick]');
+            if (cards.length > 20) cards[cards.length - 1].remove();
+        }
 
-async function sendMessage() {
-  const message = chatInput.value.trim();
-  if (!message) return;
-  chatInput.value = '';
-  addMessage(message, true);
-  addTypingIndicator();
-  try {
-    const response = await fetch('/api/command', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ command: message })
-    });
-    const data = await response.json();
-    removeTypingIndicator();
-    if (data.ok && data.task) {
-      const reply = data.task.full_text || data.task.summary || "I'm here to help.";
-      addMessage(reply, false);
-      speakText(reply);
-    } else {
-      addMessage("Sorry, I encountered an error.", false);
-    }
-  } catch (error) {
-    removeTypingIndicator();
-    addMessage("Network error. Is STARK running?", false);
-  }
-}
-sendBtn.addEventListener('click', sendMessage);
-chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+        function populateTaskLog(tasks) {
+            if (!tasks || !tasks.length) return;
+            const container = document.getElementById('task-log');
+            container.innerHTML = tasks.slice(0, 12).map(t => buildTaskCard(t)).join('');
+        }
 
-chatInput.addEventListener('input', function() {
-  this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-});
+        // ─── Initial Fetch ────────────────────────────────────────────────────────────
+        async function fetchInitialData() {
+            // Metrics
+            try {
+                const metrics = await fetch(`${API_URL}/api/metrics`).then(r => r.json());
+                updateMetricsUI(metrics);
+            } catch (e) {
+                console.warn('Could not fetch metrics:', e);
+            }
 
-async function clearTasks() {
-  if (confirm('Clear all task history? This cannot be undone.')) {
-    await fetch('/api/clear_tasks', { method: 'POST' });
-    renderTasks([]);
-    showToast('Tasks cleared');
-  }
-}
-document.getElementById('clearTasksBtn').addEventListener('click', clearTasks);
-document.getElementById('viewAllTasksBtn').addEventListener('click', showAllTasksModal);
+            // Agents
+            try {
+                const agents = await fetch(`${API_URL}/api/agents`).then(r => r.json());
+                updateAgentCards(agents);
+            } catch (e) {
+                console.warn('Could not fetch agents:', e);
+            }
 
-function formatTime(iso) { try { return new Date(iso).toLocaleTimeString(); } catch { return '--:--:--'; } }
+            // Tasks
+            try {
+                const tasks = await fetch(`${API_URL}/api/tasks`).then(r => r.json());
+                populateTaskLog(tasks);
+            } catch (e) {
+                console.warn('Could not fetch initial tasks:', e);
+            }
+        }
 
-function renderTasks(tasksList) {
-  if (!tasksList || tasksList.length === 0) {
-    taskList.innerHTML = '<div class="empty-state">No tasks yet. Send a command.</div>';
-    return;
-  }
-  taskList.innerHTML = tasksList.slice(0, 30).map(task => `
-    <div class="task-item" onclick='showTaskDetail(${JSON.stringify(task).replace(/'/g, "&#39;")})'>
-      <div class="task-header"><span class="task-type ${task.type}">${task.type || 'unknown'}</span><span class="task-time">${formatTime(task.time || task.timestamp)}</span></div>
-      <div class="task-query">${escapeHtml((task.query || task.intent || '...').substring(0, 60))}</div>
-      <div class="task-footer"><span>${task.assigned_to || 'STARK'}</span><span class="task-status ${task.status}">${task.status === 'success' ? '✓ Success' : '✗ Error'}</span></div>
-    </div>
-  `).join('');
-}
+        // ─── REST Polling Fallback ────────────────────────────────────────────────────
+        // Polls metrics, agents, and tasks every 5 seconds regardless of WebSocket state.
+        // This ensures data always displays even if WebSocket events are not firing.
+        let _pollingInterval = null;
 
-function renderAgents(agentsData) {
-  if (!agentsData || Object.keys(agentsData).length === 0) {
-    agentsWidget.innerHTML = '<div class="empty-state">Loading agents...</div>';
-    return;
-  }
-  agentsWidget.innerHTML = Object.values(agentsData).map(agent => `
-    <div class="agent-card">
-      <div class="agent-header"><span class="agent-name ${agent.name.toLowerCase()}">${agent.name}</span><span class="status-badge status-${agent.status || 'idle'}">${agent.status || 'idle'}</span></div>
-      <div class="agent-stats">
-        <div class="stat"><div class="value">${agent.success_rate || 0}%</div><div class="label">Success</div></div>
-        <div class="stat"><div class="value">${agent.avg_response_ms || 0}ms</div><div class="label">Avg Resp</div></div>
-        <div class="stat"><div class="value">${agent.tasks_completed || 0}</div><div class="label">Tasks</div></div>
-      </div>
-      <div class="kids-list">${(agent.kids || []).map(kid => `<span class="kid">${kid}</span>`).join('')}</div>
-    </div>
-  `).join('');
-}
+        function startPolling() {
+            if (_pollingInterval) return; // already running
+            _pollingInterval = setInterval(async () => {
+                try {
+                    const metrics = await fetch(`${API_URL}/api/metrics`).then(r => r.json());
+                    updateMetricsUI(metrics);
+                } catch (e) { /* backend may be temporarily unreachable */ }
 
-function updateStats(data) {
-  statsWidget.innerHTML = `
-    <div class="stat-item">
-      <div class="stat-label">CPU <span>${data.cpu}%</span></div>
-      <div class="stat-bar"><div class="stat-fill cpu" style="width:${data.cpu}%"></div></div>
-      <div class="stat-value">${data.cpu}%</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-label">RAM <span>${data.ram_percent}%</span></div>
-      <div class="stat-bar"><div class="stat-fill ram" style="width:${data.ram_percent}%"></div></div>
-      <div class="stat-value">${data.ram_used_gb} GB / ${data.ram_total_gb} GB</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-label">DISK <span>${data.disk_percent}%</span></div>
-      <div class="stat-bar"><div class="stat-fill disk" style="width:${data.disk_percent}%"></div></div>
-      <div class="stat-value">${data.disk_used_gb} GB / ${data.disk_total_gb} GB</div>
-    </div>
-  `;
-}
+                try {
+                    const agents = await fetch(`${API_URL}/api/agents`).then(r => r.json());
+                    updateAgentCards(agents);
+                } catch (e) { /* silent */ }
 
-function initSocket() {
-  socket = io({ transports: ['websocket', 'polling'], reconnection: true });
-  socket.on('connect', () => {
-    fetch('/api/agents').then(r => r.json()).then(renderAgents);
-    fetch('/api/tasks').then(r => r.json()).then(t => renderTasks(t));
-    fetch('/api/metrics').then(r => r.json()).then(updateStats);
-  });
-  socket.on('task_update', () => { fetch('/api/tasks').then(r => r.json()).then(renderTasks); });
-  socket.on('agent_update', renderAgents);
-  socket.on('system_metrics', updateStats);
-}
+                try {
+                    const tasks = await fetch(`${API_URL}/api/tasks`).then(r => r.json());
+                    populateTaskLog(tasks);
+                } catch (e) { /* silent */ }
+            }, 5000);
+        }
 
-function closeModal() { document.getElementById('modal').style.display = 'none'; }
-window.onclick = (e) => { if (e.target === document.getElementById('modal')) closeModal(); };
+        function stopPolling() {
+            if (_pollingInterval) {
+                clearInterval(_pollingInterval);
+                _pollingInterval = null;
+            }
+        }
 
-function init() {
-  loadProfile();
-  initVoiceRecognition();
-  initSocket();
-  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-  setTimeout(scrollToBottom, 100);
-}
-init();
-</script>
+        // ─── Chat ─────────────────────────────────────────────────────────────────────
+        const commandInput = document.getElementById('command-input');
+        const chatContainer = document.getElementById('chat-container');
+
+        async function sendCommand() {
+            const cmd = commandInput.value.trim();
+            if (!cmd) return;
+            appendMessage('You', cmd, true);
+            commandInput.value = '';
+            document.getElementById('typing-indicator').classList.remove('hidden');
+
+            try {
+                const res = await fetch(`${API_URL}/api/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd })
+                });
+                const data = await res.json();
+                document.getElementById('typing-indicator').classList.add('hidden');
+                appendMessage('STARK', data.response);
+                if (ttsEnabled) speak(data.response);
+            } catch (err) {
+                document.getElementById('typing-indicator').classList.add('hidden');
+                appendMessage('STARK', 'Backend connection failed. System in local-only mode.');
+            }
+        }
+
+        function appendMessage(sender, text, isUser = false) {
+            const div = document.createElement('div');
+            div.className = `flex ${isUser ? 'justify-end' : 'justify-start'} message-fade-in`;
+            div.innerHTML = `
+            <div class="max-w-[85%] ${isUser
+                    ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none'
+                    : 'bg-gray-100 text-gray-800 rounded-2xl rounded-tl-none dark:bg-dark-surface dark:text-gray-200'
+                } p-4 shadow-sm">
+                <p class="text-sm leading-relaxed">${escHtml(text)}</p>
+                <div class="mt-1 text-[10px] ${isUser ? 'text-blue-100 text-right' : 'text-gray-400 text-left'}">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+            </div>`;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function clearChat() {
+            chatContainer.innerHTML = '';
+            appendMessage('System', 'Chat cleared. All transmission logs purged.');
+        }
+
+        function speak(text) {
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.rate = 1.1;
+            speechSynthesis.speak(utter);
+        }
+
+        // Speech Recognition
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRec) {
+            const rec = new SpeechRec();
+            rec.onresult = (e) => { commandInput.value = e.results[0][0].transcript; sendCommand(); };
+            document.getElementById('mic-btn').onclick = () => rec.start();
+        }
+
+        document.getElementById('speaker-btn').onclick = () => {
+            ttsEnabled = !ttsEnabled;
+            localStorage.setItem('tts_enabled', ttsEnabled);
+            updateSpeakerUI();
+        };
+
+        function updateSpeakerUI() {
+            const icon = document.getElementById('speaker-icon');
+            if (ttsEnabled) {
+                icon.className = 'ri-volume-up-line text-xl';
+                document.getElementById('speaker-btn').classList.add('text-blue-600');
+            } else {
+                icon.className = 'ri-volume-mute-line text-xl';
+                document.getElementById('speaker-btn').classList.remove('text-blue-600');
+            }
+        }
+
+        // ─── Modals ───────────────────────────────────────────────────────────────────
+        const modalWrap = document.getElementById('modal-wrapper');
+        const modalContent = document.getElementById('modal-content');
+
+        function openModal(html, wide = false) {
+            modalContent.innerHTML = html;
+            modalWrap.classList.remove('hidden');
+            const container = document.getElementById('modal-container');
+            if (wide) {
+                container.classList.remove('max-w-lg');
+                container.classList.add('max-w-2xl');
+            } else {
+                container.classList.remove('max-w-2xl');
+                container.classList.add('max-w-lg');
+            }
+        }
+        function closeAllModals() {
+            modalWrap.classList.add('hidden');
+        }
+
+        // ─── Agent Detail Modal ───────────────────────────────────────────────────────
+        const AGENT_META = {
+            Morgan: {
+                initial: 'M', role: 'Research & Analysis',
+                color: { bg: '#E1F5EE', text: '#0F6E56', accent: '#1D9E75' },
+                kids: [
+                    { name: 'JARVIS', task: 'Web intelligence', status: 'online' },
+                    { name: 'FRIDAY', task: 'Pattern analysis', status: 'online' },
+                    { name: 'Jocasta', task: 'Data synthesis', status: 'idle' },
+                ],
+                perf: [82, 88, 91, 94, 90, 96, 98, 97, 99, 98, 97, 98],
+                uptime: 99.7, load: 42,
+            },
+            Peter: {
+                initial: 'P', role: 'Field Operations',
+                color: { bg: '#EEEDFE', text: '#3C3489', accent: '#7F77DD' },
+                kids: [
+                    { name: 'Karen', task: 'Threat assessment', status: 'online' },
+                    { name: 'Ned', task: 'Comms relay', status: 'online' },
+                    { name: 'Miles', task: 'Field support', status: 'idle' },
+                ],
+                perf: [76, 80, 85, 82, 88, 87, 90, 93, 91, 94, 95, 95],
+                uptime: 98.2, load: 71,
+            },
+            Harley: {
+                initial: 'H', role: 'Engineering & Build',
+                color: { bg: '#FAEEDA', text: '#633806', accent: '#BA7517' },
+                kids: [
+                    { name: 'Groot', task: 'Structural sim', status: 'busy' },
+                    { name: 'Rover', task: 'Diagnostics', status: 'online' },
+                    { name: 'Parker', task: 'Prototype tests', status: 'busy' },
+                ],
+                perf: [70, 74, 78, 73, 80, 82, 84, 87, 86, 89, 91, 90],
+                uptime: 96.4, load: 89,
+            },
+            Ultron: {
+                initial: 'U', role: 'Security & Defense',
+                color: { bg: '#FCEBEB', text: '#791F1F', accent: '#E24B4A' },
+                kids: [
+                    { name: 'Vision', task: 'Threat monitoring', status: 'online' },
+                    { name: 'Nexus', task: 'Perimeter scan', status: 'online' },
+                    { name: 'Sentry', task: 'Response ready', status: 'idle' },
+                ],
+                perf: [95, 97, 96, 98, 99, 98, 99, 100, 99, 99, 99, 99],
+                uptime: 99.9, load: 28,
+            },
+        };
+
+        const KID_COLORS = [
+            { bg: '#E6F1FB', text: '#0C447C' },
+            { bg: '#E1F5EE', text: '#0F6E56' },
+            { bg: '#EEEDFE', text: '#3C3489' },
+        ];
+
+        const STATUS_DOT = {
+            online: '#22c55e',
+            busy: '#f59e0b',
+            idle: '#94a3b8',
+            offline: '#ef4444',
+            warning: '#f59e0b',
+        };
+        const STATUS_BADGE = {
+            online: { bg: '#EAF3DE', color: '#27500A', border: '#C0DD97', label: 'Online' },
+            busy: { bg: '#FAEEDA', color: '#633806', border: '#FAC775', label: 'Busy' },
+            idle: { bg: '#F1EFE8', color: '#5F5E5A', border: '#D3D1C7', label: 'Idle' },
+            offline: { bg: '#FCEBEB', color: '#791F1F', border: '#F7C1C1', label: 'Offline' },
+            warning: { bg: '#FAEEDA', color: '#633806', border: '#FAC775', label: 'Standby' },
+        };
+
+        function fmtMs(ms) {
+            if (ms == null) return '--';
+            return ms >= 1000 ? (ms / 1000).toFixed(1) + 's' : ms + 'ms';
+        }
+        function fmtTasks(n) {
+            if (n == null) return '--';
+            return n >= 1000 ? (n / 1000).toFixed(0) + 'k' : String(n);
+        }
+
+        function openAgentModal(name) {
+            const meta = AGENT_META[name];
+            if (!meta) return;
+
+            // Read live data from the sidebar card DOM
+            const liveSuccess = document.getElementById(`stat-success-${name}`)?.innerText || '--';
+            const liveAvg = document.getElementById(`stat-avg-${name}`)?.innerText || '--';
+            const liveTasks = document.getElementById(`stat-tasks-${name}`)?.innerText || '--';
+            const statusDotEl = document.getElementById(`status-dot-${name}`);
+            const rawStatus = statusDotEl
+                ? (statusDotEl.className.includes('green') ? 'online'
+                    : statusDotEl.className.includes('red') ? 'offline'
+                        : statusDotEl.className.includes('amber') ? 'warning'
+                            : statusDotEl.className.includes('blue') ? 'idle' : 'online')
+                : 'online';
+
+            const sb = STATUS_BADGE[rawStatus] || STATUS_BADGE.online;
+            const c = meta.color;
+
+            // Kids HTML
+            const kidsHtml = meta.kids.map((k, i) => {
+                const kc = KID_COLORS[i % KID_COLORS.length];
+                const dot = STATUS_DOT[k.status] || '#94a3b8';
+                return `
+            <div class="kid-detail-card">
+                <div class="kid-detail-avatar" style="background:${kc.bg}; color:${kc.text}">${k.name[0]}</div>
+                <div style="flex:1; min-width:0">
+                    <div class="kid-detail-name">${escHtml(k.name)}</div>
+                    <div class="kid-detail-task">${escHtml(k.task)}</div>
+                </div>
+                <span class="kid-status-dot" style="background:${dot}" title="${k.status}"></span>
+            </div>`;
+            }).join('');
+
+            // Performance bars
+            const successNum = parseFloat(liveSuccess) || meta.perf[meta.perf.length - 1];
+            const loadColor = meta.load > 80 ? '#ef4444' : meta.load > 60 ? '#f59e0b' : c.accent;
+            const perfBars = [
+                { label: 'Success rate', val: liveSuccess, pct: successNum, color: c.accent },
+                { label: 'System load', val: meta.load + '%', pct: meta.load, color: loadColor },
+                { label: 'Uptime', val: meta.uptime + '%', pct: meta.uptime, color: '#22c55e' },
+            ];
+            const perfBarsHtml = perfBars.map(b => `
+            <div class="perf-bar-row">
+                <div class="perf-bar-labels">
+                    <span class="perf-bar-label">${b.label}</span>
+                    <span class="perf-bar-val">${b.val}</span>
+                </div>
+                <div class="perf-bar-track">
+                    <div class="perf-bar-fill" style="width:${b.pct}%; background:${b.color}"></div>
+                </div>
+            </div>`).join('');
+
+            // Activity blocks
+            const months = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+            const activityHtml = meta.perf.map((v, i) => {
+                const col = v >= 95 ? '#22c55e' : v >= 85 ? '#3b82f6' : v >= 75 ? '#f59e0b' : '#ef4444';
+                return `<span class="activity-block" title="${months[i]}: ${v}%" style="background:${col}; height:${8 + Math.round(v / 10)}px; width:14px; display:inline-block; border-radius:3px; margin:1px; vertical-align:bottom"></span>`;
+            }).join('');
+
+            openModal(`
+            <div class="agent-detail-header">
+                <div class="agent-detail-avatar" style="background:${c.bg}; color:${c.text}">${meta.initial}</div>
+                <div>
+                    <h2 class="text-xl font-bold dark:text-white" style="margin-bottom:3px">${escHtml(name)}</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">${escHtml(meta.role)} &nbsp;·&nbsp; ${meta.kids.length} sub-agents</p>
+                </div>
+                <div class="agent-status-badge" style="background:${sb.bg}; color:${sb.color}; border-color:${sb.border}">
+                    <span style="width:7px;height:7px;border-radius:50%;background:${STATUS_DOT[rawStatus]};display:inline-block;flex-shrink:0"></span>
+                    ${sb.label}
+                </div>
+            </div>
+
+            <div class="agent-stats-row" style="margin: 0 -32px; padding: 0 32px;">
+                <div class="agent-stat-cell">
+                    <div class="agent-stat-label">Success rate</div>
+                    <div class="agent-stat-value" style="color:${c.accent}">${escHtml(liveSuccess)}</div>
+                    <div class="agent-stat-sub">Last 30 days</div>
+                </div>
+                <div class="agent-stat-cell">
+                    <div class="agent-stat-label">Avg response</div>
+                    <div class="agent-stat-value dark:text-white">${escHtml(liveAvg)}</div>
+                    <div class="agent-stat-sub">Per task</div>
+                </div>
+                <div class="agent-stat-cell">
+                    <div class="agent-stat-label">Tasks done</div>
+                    <div class="agent-stat-value dark:text-white">${escHtml(liveTasks)}</div>
+                    <div class="agent-stat-sub">All time</div>
+                </div>
+            </div>
+
+            <div class="agent-detail-body">
+                <div>
+                    <div class="agent-section-label">Sub-agents</div>
+                    ${kidsHtml}
+                </div>
+                <div>
+                    <div class="agent-section-label">Performance</div>
+                    ${perfBarsHtml}
+                    <div style="margin-top:18px">
+                        <div class="agent-section-label" style="margin-bottom:8px">Task activity (12 mo)</div>
+                        <div style="display:flex; align-items:flex-end; gap:2px; height:36px; margin-bottom:6px">
+                            ${activityHtml}
+                        </div>
+                        <div style="display:flex; justify-content:space-between">
+                            <span style="font-size:10px; color:#9ca3af">Jan</span>
+                            <span style="font-size:10px; color:#9ca3af">Dec</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `, true); // wide=true
+        }
+
+        // Shortcuts Modal
+        function toggleShortcutsModal() {
+            openModal(`
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2 dark:text-white"><i class="ri-keyboard-line text-blue-600"></i> Keyboard Shortcuts</h2>
+            <div class="space-y-4 text-sm text-gray-600 dark:text-gray-300">
+                <div class="flex justify-between items-center"><span>Focus Input</span><kbd class="px-2 py-1 bg-gray-100 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded text-xs font-bold">Cmd+K</kbd></div>
+                <div class="flex justify-between items-center"><span>Toggle Theme</span><kbd class="px-2 py-1 bg-gray-100 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded text-xs font-bold">Cmd+D</kbd></div>
+                <div class="flex justify-between items-center"><span>Shortcuts</span><kbd class="px-2 py-1 bg-gray-100 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded text-xs font-bold">Cmd+/</kbd></div>
+                <div class="flex justify-between items-center"><span>Close Modal</span><kbd class="px-2 py-1 bg-gray-100 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded text-xs font-bold">Esc</kbd></div>
+            </div>
+        `);
+        }
+
+        // Profile Modal
+        function openProfileModal() {
+            const p = JSON.parse(localStorage.getItem('stark_profile')) || { name: 'Tony Stark', email: 'tony@stark.ai', phone: '+1 212-STARK' };
+            const initials = getInitials(p.name);
+            openModal(`
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2 dark:text-white"><i class="ri-user-settings-line text-blue-600"></i> Operator Profile</h2>
+            <div class="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-dark-bg rounded-xl">
+                <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#6366f1);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:20px;flex-shrink:0">${escHtml(initials)}</div>
+                <div>
+                    <p class="font-semibold dark:text-white">${escHtml(p.name)}</p>
+                    <p class="text-xs text-gray-400">${escHtml(p.email)}</p>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div><label class="block text-[10px] font-bold text-gray-400 mb-1">NAME</label><input type="text" id="p-name" class="modal-input" value="${escAttr(p.name)}"></div>
+                <div><label class="block text-[10px] font-bold text-gray-400 mb-1">EMAIL</label><input type="email" id="p-email" class="modal-input" value="${escAttr(p.email)}"></div>
+                <div><label class="block text-[10px] font-bold text-gray-400 mb-1">PHONE</label><input type="text" id="p-phone" class="modal-input" value="${escAttr(p.phone)}"></div>
+                <button onclick="saveProfile()" class="modal-btn-primary">Save Configuration</button>
+            </div>
+        `);
+        }
+
+        function saveProfile() {
+            const d = {
+                name: document.getElementById('p-name').value,
+                email: document.getElementById('p-email').value,
+                phone: document.getElementById('p-phone').value
+            };
+            localStorage.setItem('stark_profile', JSON.stringify(d));
+            updateProfileAvatar(d.name);
+            closeAllModals();
+            appendMessage('System', 'Identity signature updated.');
+        }
+
+        function updateProfileAvatar(name) {
+            const av = document.getElementById('profile-avatar');
+            if (av) av.innerText = getInitials(name);
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.trim().split(/\s+/).map(w => w[0].toUpperCase()).slice(0, 2).join('');
+        }
+
+        function loadProfileOnStart() {
+            const p = JSON.parse(localStorage.getItem('stark_profile')) || null;
+            if (p && p.name) updateProfileAvatar(p.name);
+        }
+
+        // Memory Modal
+        async function openMemoryModal() {
+            openModal(`<div class="flex items-center justify-center py-10 gap-3 text-gray-500"><div class="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div><span class="animate-pulse text-sm">Syncing neural memory...</span></div>`);
+            try {
+                const res = await fetch(`${API_URL}/api/memory`).then(r => r.json());
+                const entries = Object.entries(res);
+                const items = entries.length
+                    ? entries.map(([k, v]) => `
+                    <div class="flex justify-between items-start p-3 bg-gray-50 dark:bg-dark-bg rounded-xl mb-2 gap-3">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[9px] font-bold text-gray-400 uppercase mb-0.5">${escHtml(k)}</p>
+                            <p class="text-sm dark:text-white break-words">${escHtml(String(v))}</p>
+                        </div>
+                        <button onclick="deleteMemoryKey('${escAttr(k)}')" class="flex-shrink-0 text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400 transition-colors" title="Delete">
+                            <i class="ri-delete-bin-line text-base"></i>
+                        </button>
+                    </div>`).join('')
+                    : `<p class="text-center text-gray-400 italic py-6">No patterns stored.</p>`;
+
+                openModal(`
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold flex items-center gap-2 dark:text-white"><i class="ri-brain-line text-purple-600"></i> Neural Memory</h2>
+                    <button onclick="purgeMemory()" class="modal-btn-danger">Purge All</button>
+                </div>
+                <div class="max-h-96 overflow-y-auto">${items}</div>
+            `);
+            } catch (e) {
+                openModal(`<p class="text-red-500 text-sm py-4"><i class="ri-error-warning-line mr-2"></i>Neural link offline.</p>`);
+            }
+        }
+
+        async function deleteMemoryKey(key) {
+            try {
+                await fetch(`${API_URL}/api/memory/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key })
+                });
+                openMemoryModal();
+            } catch (e) {
+                appendMessage('System', `Failed to delete memory key: ${key}`);
+            }
+        }
+
+        async function purgeMemory() {
+            if (!confirm('Purge ALL neural memory? This cannot be undone.')) return;
+            try {
+                await fetch(`${API_URL}/api/memory/clear`, { method: 'POST' });
+                openMemoryModal();
+                appendMessage('System', 'Neural memory purged. All stored patterns erased.');
+            } catch (e) {
+                appendMessage('System', 'Memory purge failed. Link offline.');
+            }
+        }
+
+        // Archive Modal
+        async function openArchiveModal() {
+            openModal(`<div class="flex items-center justify-center py-10 gap-3 text-gray-500"><div class="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div><span class="animate-pulse text-sm">Accessing archives...</span></div>`);
+            try {
+                const tasks = await fetch(`${API_URL}/api/tasks`).then(r => r.json());
+                const rows = tasks.map(t => {
+                    const statusClass = t.status === 'Success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+                    return `
+                    <div onclick='openTaskDetail(${JSON.stringify(t).replace(/'/g, "\\'")})'
+                         class="archive-task p-4 bg-gray-50 dark:bg-dark-bg border border-gray-100 dark:border-dark-border rounded-xl">
+                        <div class="flex justify-between mb-2">
+                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-white dark:bg-dark-surface dark:text-gray-400 uppercase border border-gray-100 dark:border-dark-border">${escHtml(t.type || 'TASK')}</span>
+                            <span class="text-[9px] text-gray-400">${escHtml(t.timestamp || '')}</span>
+                        </div>
+                        <p class="text-sm font-medium dark:text-white">${escHtml(t.description || '')}</p>
+                        <div class="mt-2 flex justify-between">
+                            <span class="text-[9px] font-bold uppercase ${statusClass}">${escHtml(t.status || '')}</span>
+                            ${t.id ? `<span class="text-[9px] text-gray-400">ID: ${String(t.id).slice(0, 8)}</span>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+
+                openModal(`
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2 dark:text-white"><i class="ri-history-line text-blue-600"></i> System Archives</h2>
+                <div class="space-y-3 max-h-[60vh] overflow-y-auto">${rows || '<p class="text-gray-400 italic text-center py-6">No archived tasks.</p>'}</div>
+            `);
+            } catch (e) {
+                openModal(`<p class="text-red-500 text-sm py-4"><i class="ri-error-warning-line mr-2"></i>Archives restricted. Connection offline.</p>`);
+            }
+        }
+
+        // Task Detail Modal
+        function openTaskDetail(taskOrJson) {
+            // task may be object (from JS call) or JSON string (from inline onclick attr)
+            const t = typeof taskOrJson === 'string' ? JSON.parse(taskOrJson) : taskOrJson;
+            const statusClass = t.status === 'Success' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400';
+            openModal(`
+            <div class="flex items-center gap-2 mb-6">
+                <i class="ri-task-line text-blue-600 text-xl"></i>
+                <h2 class="text-xl font-bold dark:text-white">Task Detail</h2>
+            </div>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-[9px] font-bold px-2 py-1 rounded bg-gray-100 dark:bg-dark-bg uppercase text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-dark-border">${escHtml(t.type || 'TASK')}</span>
+                    <span class="text-[9px] font-bold uppercase ${statusClass}">${escHtml(t.status || '')}</span>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Description</p>
+                    <p class="text-sm dark:text-white">${escHtml(t.description || '')}</p>
+                </div>
+                ${t.response ? `
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Full Response</p>
+                    <div class="p-3 bg-gray-50 dark:bg-dark-bg rounded-xl text-sm dark:text-gray-300 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono text-xs leading-relaxed">${escHtml(t.response)}</div>
+                </div>` : ''}
+                <div class="flex justify-between text-xs text-gray-400">
+                    ${t.timestamp ? `<span>${escHtml(t.timestamp)}</span>` : '<span></span>'}
+                    ${t.id ? `<span class="font-mono">ID: ${escHtml(String(t.id))}</span>` : ''}
+                </div>
+            </div>
+        `);
+        }
+
+        // ─── Sidebar Toggle ───────────────────────────────────────────────────────────
+        document.getElementById('sidebar-toggle').onclick = () => {
+            const s = document.getElementById('left-sidebar');
+            s.style.width = s.style.width === '0px' ? '18rem' : '0px';
+        };
+
+        // ─── Keyboard Shortcuts ───────────────────────────────────────────────────────
+        window.addEventListener('keydown', (e) => {
+            const cmd = e.metaKey || e.ctrlKey;
+            if (cmd && e.key === 'k') { e.preventDefault(); commandInput.focus(); }
+            if (cmd && e.key === '/') { e.preventDefault(); toggleShortcutsModal(); }
+            if (cmd && e.key === 'd') { e.preventDefault(); themeToggle.click(); }
+            if (e.key === 'Escape') closeAllModals();
+        });
+
+        // Click outside modal to close
+        document.getElementById('modal-wrapper').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('modal-wrapper')) closeAllModals();
+        });
+
+        // ─── Clock ────────────────────────────────────────────────────────────────────
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('header-clock').innerText =
+                now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) +
+                ' • ' + now.toLocaleTimeString([], { hour12: false });
+        }
+
+        // ─── Utilities ────────────────────────────────────────────────────────────────
+        function escHtml(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+        function escAttr(str) {
+            return escHtml(str);
+        }
+
+        // ─── Init ─────────────────────────────────────────────────────────────────────
+        window.onload = () => {
+            applyTheme();
+            updateClock();
+            setInterval(updateClock, 1000);
+            updateSpeakerUI();
+            loadProfileOnStart();
+
+            // Fetch data immediately via REST — don't wait for WebSocket handshake
+            fetchInitialData().then(() => startPolling());
+
+            // Then establish WebSocket for real-time push events (polling continues as fallback)
+            initSocket();
+
+            commandInput.addEventListener('keypress', (e) => e.key === 'Enter' && sendCommand());
+            document.getElementById('send-btn').onclick = sendCommand;
+
+            // Auto-focus input
+            commandInput.focus();
+        };
+    </script>
 </body>
+
 </html>
