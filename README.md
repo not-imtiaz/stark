@@ -10,6 +10,8 @@ A hierarchical multi-agent system inspired by JARVIS, built with zero budget.
 ## Current Status
 🚧 **Phase 1:** Father STARK core — in progress
 
+** GOT INTO A PROBLEM, DISCONTINUED. STARTING OVER ON github.com/not-imtiaz/stark-ai/ , FEEL FREE TO CONTRIBUTE **
+
 ## Build Log
 All development decisions, failures, and learnings are logged in `/build_logs/`
 
