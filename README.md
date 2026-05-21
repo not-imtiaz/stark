@@ -20,3 +20,4 @@ Python, Vosk (voice), DeepSeek API (translator), Flask (dashboard)
 
 ## License
 MIT
+UNCONTINUED
